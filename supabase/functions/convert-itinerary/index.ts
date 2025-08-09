@@ -3,6 +3,28 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface WeeklyItineraryData {
+  tripTitle?: string;
+  summary?: string;
+  destination?: string;
+  duration?: string;
+  numberOfTravelers?: number;
+  schedule?: any[];
+  checklist?: any[];
+  mapPins?: any[];
+}
+
+interface FinalItineraryData {
+  tripTitle: string;
+  summary: string;
+  destination: string;
+  duration: string;
+  numberOfTravelers: number;
+  schedule: any[];
+  checklist: any[];
+  mapPins: any[];
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -10,16 +32,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Log the incoming request for debugging
-    console.log('=== Convert Itinerary Function Started ===')
+    console.log('=== Convert Itinerary Function Started (Chunking Workflow) ===')
     console.log('Request method:', req.method)
-    console.log('Request headers:', Object.fromEntries(req.headers.entries()))
 
     // Parse the incoming request body
     let requestBody
     try {
       requestBody = await req.json()
-      console.log('Parsed request body:', requestBody)
+      console.log('Parsed request body keys:', Object.keys(requestBody))
     } catch (parseError) {
       console.error('Failed to parse request body:', parseError)
       return new Response(
@@ -52,7 +72,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('Itinerary text length:', itineraryText.length)
-    console.log('Itinerary text preview (first 200 chars):', itineraryText.substring(0, 200))
+    console.log('Itinerary text preview (first 300 chars):', itineraryText.substring(0, 300))
 
     // Check for Gemini API key
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
@@ -70,48 +90,37 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Gemini API key found, length:', geminiApiKey.length)
+    // Step 1: Analyze input to determine trip duration in weeks
+    console.log('=== Step 1: Analyzing trip duration ===')
+    const durationAnalysisPrompt = `Analyze the following travel itinerary and determine how many weeks this trip spans. Return ONLY a single number representing the number of weeks (round up to the nearest whole week if needed).
 
-    // Construct the Gemini API request payload
-    const geminiRequestBody = {
-      contents: [{
-        parts: [{
-          text: itineraryText
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.3,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2000,
-      }
-    }
+For example:
+- A 5-day trip = 1 week
+- A 10-day trip = 2 weeks  
+- A 3-week trip = 3 weeks
 
-    console.log('Gemini request payload:', JSON.stringify(geminiRequestBody, null, 2))
+Travel Itinerary:
+${itineraryText}
 
-    // Make the API call to Gemini
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`
-    console.log('Making request to Gemini API...')
+Number of weeks:`
 
-    let geminiResponse
+    let totalWeeks: number
     try {
-      geminiResponse = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(geminiRequestBody),
-      })
-
-      console.log('Gemini API response status:', geminiResponse.status)
-      console.log('Gemini API response headers:', Object.fromEntries(geminiResponse.headers.entries()))
-
-    } catch (fetchError) {
-      console.error('Network error calling Gemini API:', fetchError)
+      const durationResponse = await callGeminiAPI(geminiApiKey, durationAnalysisPrompt)
+      const weeksText = durationResponse.trim()
+      totalWeeks = parseInt(weeksText)
+      
+      if (isNaN(totalWeeks) || totalWeeks < 1 || totalWeeks > 12) {
+        throw new Error(`Invalid weeks count: ${weeksText}`)
+      }
+      
+      console.log('Detected trip duration:', totalWeeks, 'weeks')
+    } catch (error) {
+      console.error('Failed to analyze trip duration:', error)
       return new Response(
         JSON.stringify({ 
-          error: 'Network error',
-          details: `Failed to connect to Gemini API: ${fetchError.message}`
+          error: 'Failed to analyze trip duration',
+          details: error.message
         }),
         {
           status: 500,
@@ -120,153 +129,77 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Handle non-2xx responses from Gemini API
-    if (!geminiResponse.ok) {
-      console.error('Gemini API returned non-2xx status:', geminiResponse.status)
+    // Step 2: Initialize final result object
+    console.log('=== Step 2: Initializing final result object ===')
+    const finalResult: FinalItineraryData = {
+      tripTitle: '',
+      summary: '',
+      destination: '',
+      duration: '',
+      numberOfTravelers: 1,
+      schedule: [],
+      checklist: [],
+      mapPins: []
+    }
+
+    // Step 3: Process each week iteratively
+    console.log('=== Step 3: Processing weeks iteratively ===')
+    for (let week = 1; week <= totalWeeks; week++) {
+      console.log(`--- Processing Week ${week} of ${totalWeeks} ---`)
       
-      let errorDetails
       try {
-        // Try to get JSON error response
-        errorDetails = await geminiResponse.json()
-        console.error('Gemini API error response (JSON):', errorDetails)
-      } catch (jsonError) {
-        // If JSON parsing fails, get text response
-        try {
-          errorDetails = await geminiResponse.text()
-          console.error('Gemini API error response (text):', errorDetails)
-        } catch (textError) {
-          errorDetails = 'Unable to read error response from Gemini API'
-          console.error('Failed to read error response:', textError)
-        }
+        // Construct targeted prompt for this specific week
+        const weeklyPrompt = constructWeeklyPrompt(itineraryText, week, totalWeeks)
+        console.log(`Week ${week} prompt length:`, weeklyPrompt.length)
+        
+        // Make API call for this week
+        const weeklyResponse = await callGeminiAPI(geminiApiKey, weeklyPrompt)
+        console.log(`Week ${week} response length:`, weeklyResponse.length)
+        console.log(`Week ${week} response preview:`, weeklyResponse.substring(0, 200))
+        
+        // Parse and validate weekly JSON
+        const weeklyData = parseWeeklyJSON(weeklyResponse, week)
+        console.log(`Week ${week} parsed data keys:`, Object.keys(weeklyData))
+        
+        // Merge weekly data into final result
+        mergeWeeklyData(finalResult, weeklyData, week)
+        console.log(`Week ${week} merged successfully`)
+        
+      } catch (error) {
+        console.error(`Failed to process Week ${week}:`, error)
+        return new Response(
+          JSON.stringify({ 
+            error: `Failed to process Week ${week}`,
+            details: error.message,
+            completedWeeks: week - 1,
+            totalWeeks: totalWeeks
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
       }
-
-      return new Response(
-        JSON.stringify({ 
-          error: 'Gemini API error',
-          details: `Gemini API returned status ${geminiResponse.status}: ${JSON.stringify(errorDetails)}`
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
     }
 
-    // Parse the successful response from Gemini
-    let geminiData
-    try {
-      geminiData = await geminiResponse.json()
-      console.log('Gemini API response data:', JSON.stringify(geminiData, null, 2))
-    } catch (parseError) {
-      console.error('Failed to parse Gemini response as JSON:', parseError)
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid response format',
-          details: 'Gemini API returned invalid JSON response'
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
-    }
-
-    // Extract the AI response text
-    const aiResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
-
-    if (!aiResponse) {
-      console.error('No text content found in Gemini response')
-      console.error('Gemini response structure:', JSON.stringify(geminiData, null, 2))
-      return new Response(
-        JSON.stringify({ 
-          error: 'Empty response',
-          details: 'No text content received from Gemini API'
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
-    }
-
-    console.log('AI response length:', aiResponse.length)
-    console.log('AI response preview (first 500 chars):', aiResponse.substring(0, 500))
-
-    // Parse the JSON response from the AI
-    let itineraryData
-    try {
-      // Clean the response to extract JSON
-      let jsonString = aiResponse.match(/\{[\s\S]*\}/)?.[0]
-      
-      if (!jsonString) {
-        console.error('No JSON object found in AI response')
-        console.error('Full AI response:', aiResponse)
-        throw new Error('No JSON found in response')
-      }
-      
-      console.log('Extracted JSON string length:', jsonString.length)
-      console.log('Extracted JSON string preview:', jsonString.substring(0, 300))
-      
-      // Clean up common AI generation issues
-      if (jsonString) {
-        // Remove trailing commas before closing brackets/braces
-        jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1')
-        // Remove any markdown code block markers
-        jsonString = jsonString.replace(/```json\s*|\s*```/g, '')
-        // Trim whitespace
-        jsonString = jsonString.trim()
-      }
-      
-      console.log('Cleaned JSON string preview:', jsonString.substring(0, 300))
-      
-      // Parse the cleaned JSON
-      itineraryData = JSON.parse(jsonString)
-      console.log('Successfully parsed itinerary data:', JSON.stringify(itineraryData, null, 2))
-      
-    } catch (parseError) {
-      console.error('JSON parsing error:', parseError)
-      console.error('Failed to parse JSON from AI response')
-      console.error('Raw AI response:', aiResponse)
-      
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to parse itinerary data',
-          details: `JSON parsing failed: ${parseError.message}. AI response: ${aiResponse.substring(0, 500)}...`
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
-    }
-
-    // Validate that we have the expected structure
-    if (!itineraryData || typeof itineraryData !== 'object') {
-      console.error('Invalid itinerary data structure:', itineraryData)
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid data structure',
-          details: 'Parsed data is not a valid object'
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
-    }
+    // Step 4: Final validation and response
+    console.log('=== Step 4: Final validation ===')
+    console.log('Final result summary:')
+    console.log('- Title:', finalResult.tripTitle)
+    console.log('- Schedule items:', finalResult.schedule.length)
+    console.log('- Checklist categories:', finalResult.checklist.length)
+    console.log('- Map pins:', finalResult.mapPins.length)
 
     console.log('=== Convert Itinerary Function Completed Successfully ===')
 
-    // Return the successful response
     return new Response(
-      JSON.stringify({ itinerary: itineraryData }),
+      JSON.stringify({ itinerary: finalResult }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     )
 
   } catch (error) {
-    // Catch any unexpected errors
     console.error('=== Unexpected Error in Convert Itinerary Function ===')
     console.error('Error name:', error.name)
     console.error('Error message:', error.message)
@@ -284,3 +217,195 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+/**
+ * Makes a call to the Gemini API with the given prompt
+ */
+async function callGeminiAPI(apiKey: string, prompt: string): Promise<string> {
+  const geminiRequestBody = {
+    contents: [{
+      parts: [{
+        text: prompt
+      }]
+    }],
+    generationConfig: {
+      temperature: 0.3,
+      topK: 40,
+      topP: 0.95,
+      maxOutputTokens: 2000,
+    }
+  }
+
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`
+  
+  let geminiResponse
+  try {
+    geminiResponse = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(geminiRequestBody),
+    })
+  } catch (fetchError) {
+    throw new Error(`Network error calling Gemini API: ${fetchError.message}`)
+  }
+
+  if (!geminiResponse.ok) {
+    let errorDetails
+    try {
+      errorDetails = await geminiResponse.json()
+    } catch {
+      try {
+        errorDetails = await geminiResponse.text()
+      } catch {
+        errorDetails = 'Unable to read error response from Gemini API'
+      }
+    }
+    throw new Error(`Gemini API returned status ${geminiResponse.status}: ${JSON.stringify(errorDetails)}`)
+  }
+
+  let geminiData
+  try {
+    geminiData = await geminiResponse.json()
+  } catch (parseError) {
+    throw new Error('Gemini API returned invalid JSON response')
+  }
+
+  const aiResponse = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!aiResponse) {
+    throw new Error('No text content received from Gemini API')
+  }
+
+  return aiResponse
+}
+
+/**
+ * Constructs a targeted prompt for a specific week
+ */
+function constructWeeklyPrompt(fullItinerary: string, weekNumber: number, totalWeeks: number): string {
+  const basePrompt = `You are an expert travel data parser. Based on the following complete travel itinerary, generate structured JSON data for WEEK ${weekNumber} ONLY (out of ${totalWeeks} total weeks).
+
+CRITICAL INSTRUCTIONS:
+- Return ONLY valid JSON, no additional text, explanations, or markdown formatting
+- Focus ONLY on Week ${weekNumber} activities, locations, and details
+- For the first week, include all metadata (tripTitle, summary, destination, duration, numberOfTravelers)
+- For subsequent weeks, you may omit metadata or use placeholder values
+- Ensure day numbers continue sequentially (Week 2 should start with day 8 if Week 1 had 7 days, etc.)
+
+Required JSON Structure:
+{
+  "tripTitle": "Trip title (required for Week 1, optional for others)",
+  "summary": "Trip summary (required for Week 1, optional for others)", 
+  "destination": "Primary destination (required for Week 1, optional for others)",
+  "duration": "Total trip duration (required for Week 1, optional for others)",
+  "numberOfTravelers": 2,
+  "schedule": [
+    {
+      "day": 1,
+      "date": "2024-03-15",
+      "time": "09:00",
+      "activity": "Activity name",
+      "description": "Detailed activity description",
+      "location": "Specific location name",
+      "coordinates": { "lat": 35.6762, "lng": 139.6503 },
+      "estimatedCost": "$50 per person"
+    }
+  ],
+  "checklist": [
+    {
+      "category": "Week ${weekNumber} Preparations",
+      "items": [
+        {
+          "task": "Specific task for this week",
+          "completed": false,
+          "priority": "high"
+        }
+      ]
+    }
+  ],
+  "mapPins": [
+    {
+      "id": "week${weekNumber}_pin_1",
+      "name": "Location name",
+      "address": "Full address",
+      "lat": 35.6812,
+      "lng": 139.7671,
+      "type": "attraction",
+      "day": 1,
+      "description": "Location description"
+    }
+  ]
+}
+
+Complete Travel Itinerary:
+${fullItinerary}
+
+Generate JSON for WEEK ${weekNumber} ONLY:`
+
+  return basePrompt
+}
+
+/**
+ * Parses and validates JSON response for a specific week
+ */
+function parseWeeklyJSON(response: string, weekNumber: number): WeeklyItineraryData {
+  try {
+    // Extract JSON from response
+    let jsonString = response.match(/\{[\s\S]*\}/)?.[0]
+    
+    if (!jsonString) {
+      throw new Error(`No JSON object found in Week ${weekNumber} response`)
+    }
+    
+    // Clean up common AI generation issues
+    jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1')
+    jsonString = jsonString.replace(/```json\s*|\s*```/g, '')
+    jsonString = jsonString.trim()
+    
+    // Parse the cleaned JSON
+    const weeklyData = JSON.parse(jsonString)
+    
+    // Validate structure
+    if (!weeklyData || typeof weeklyData !== 'object') {
+      throw new Error(`Week ${weekNumber} data is not a valid object`)
+    }
+    
+    // Ensure arrays exist
+    if (!Array.isArray(weeklyData.schedule)) weeklyData.schedule = []
+    if (!Array.isArray(weeklyData.checklist)) weeklyData.checklist = []
+    if (!Array.isArray(weeklyData.mapPins)) weeklyData.mapPins = []
+    
+    return weeklyData
+    
+  } catch (parseError) {
+    throw new Error(`Failed to parse Week ${weekNumber} JSON: ${parseError.message}`)
+  }
+}
+
+/**
+ * Merges weekly data into the final result object
+ */
+function mergeWeeklyData(finalResult: FinalItineraryData, weeklyData: WeeklyItineraryData, weekNumber: number): void {
+  // For the first week, capture metadata
+  if (weekNumber === 1) {
+    if (weeklyData.tripTitle) finalResult.tripTitle = weeklyData.tripTitle
+    if (weeklyData.summary) finalResult.summary = weeklyData.summary
+    if (weeklyData.destination) finalResult.destination = weeklyData.destination
+    if (weeklyData.duration) finalResult.duration = weeklyData.duration
+    if (weeklyData.numberOfTravelers) finalResult.numberOfTravelers = weeklyData.numberOfTravelers
+  }
+  
+  // Merge arrays (append weekly data to final arrays)
+  if (weeklyData.schedule && Array.isArray(weeklyData.schedule)) {
+    finalResult.schedule.push(...weeklyData.schedule)
+  }
+  
+  if (weeklyData.checklist && Array.isArray(weeklyData.checklist)) {
+    finalResult.checklist.push(...weeklyData.checklist)
+  }
+  
+  if (weeklyData.mapPins && Array.isArray(weeklyData.mapPins)) {
+    finalResult.mapPins.push(...weeklyData.mapPins)
+  }
+}
