@@ -1,81 +1,89 @@
-import React, { useState } from 'react';
-import { useEffect } from 'react';
-import { ArrowLeft, Bookmark, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ChatWindow from '../components/ChatWindow';
-import SaveModal from '../components/SaveModal';
+import ChatSidebar from '../components/ChatSidebar';
+import ItineraryPanel from '../components/ItineraryPanel';
+import AuthModal from '../components/AuthModal';
 import { supabase } from '../lib/supabase';
-
-export interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
-}
-
-export interface ChatSession {
-  id: string;
-  title: string;
-  created_at: Date;
-  updated_at: Date;
-  is_saved: boolean;
-}
+import { AuthService } from '../lib/auth';
+import { User as UserType, ChatSession, Message, ItineraryData } from '../types';
 
 const ChatPage: React.FC = () => {
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [sessions, setSessions] = useState<ChatSession[]>([
-  ]);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionParam = searchParams.get('session');
+
+  const [user, setUser] = useState<UserType | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionParam);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [showSaveModal, setShowSaveModal] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [itineraryData, setItineraryData] = useState<ItineraryData | null>(null);
+  const [isConverting, setIsConverting] = useState(false);
 
-  // Load sessions and messages on component mount
   useEffect(() => {
-    loadSessions();
+    checkAuth();
   }, []);
 
   useEffect(() => {
-    if (currentSessionId) {
+    if (user) {
+      loadSessions();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (currentSessionId && user) {
       loadMessages(currentSessionId);
     }
-  }, [currentSessionId]);
+  }, [currentSessionId, user]);
 
-  // Load all chat sessions from database
+  const checkAuth = async () => {
+    const currentUser = await AuthService.getCurrentUser();
+    if (currentUser) {
+      setUser(currentUser);
+    } else {
+      setShowAuthModal(true);
+    }
+  };
+
+  const handleAuth = (authenticatedUser: UserType) => {
+    setUser(authenticatedUser);
+    setShowAuthModal(false);
+  };
+
   const loadSessions = async () => {
+    if (!user) return;
+
     try {
       const { data: sessionsData, error } = await supabase
         .from('chat_sessions')
         .select('*')
+        .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedSessions: ChatSession[] = sessionsData.map(session => ({
-        id: session.id,
-        title: session.title || 'New Travel Plan',
-        created_at: new Date(session.created_at || ''),
-        updated_at: new Date(session.updated_at || ''),
-        is_saved: session.is_saved || false
-      }));
-
-      if (formattedSessions.length === 0) {
-        // Create initial session if none exist
+      if (sessionsData.length === 0) {
         await createNewSession();
       } else {
-        setSessions(formattedSessions);
-        setCurrentSessionId(formattedSessions[0].id);
+        setSessions(sessionsData);
+        if (!currentSessionId || !sessionsData.find(s => s.id === currentSessionId)) {
+          setCurrentSessionId(sessionsData[0].id);
+        }
       }
     } catch (error) {
       console.error('Error loading sessions:', error);
-      // Fallback to creating a new session
       await createNewSession();
     } finally {
       setIsLoadingSessions(false);
     }
   };
 
-  // Load messages for a specific session
   const loadMessages = async (sessionId: string) => {
     try {
       const { data: messagesData, error } = await supabase
@@ -86,15 +94,7 @@ const ChatPage: React.FC = () => {
 
       if (error) throw error;
 
-      const formattedMessages: Message[] = messagesData.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        sender: msg.sender as 'user' | 'ai',
-        timestamp: new Date(msg.created_at || '')
-      }));
-
-      // If no messages exist, add the welcome message
-      if (formattedMessages.length === 0) {
+      if (messagesData.length === 0) {
         const welcomeMessage = {
           session_id: sessionId,
           content: "Hello! I'm Nomad's Compass, your AI travel planning assistant. I'm here to help you create the perfect adventure. Where would you like to explore?",
@@ -111,69 +111,54 @@ const ChatPage: React.FC = () => {
 
         setMessages([{
           id: newMessage.id,
+          session_id: newMessage.session_id,
           content: newMessage.content,
           sender: newMessage.sender as 'user' | 'ai',
-          timestamp: new Date(newMessage.created_at || '')
+          created_at: newMessage.created_at
         }]);
       } else {
-        setMessages(formattedMessages);
+        setMessages(messagesData);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
-      // Fallback to welcome message
       setMessages([{
         id: '1',
+        session_id: sessionId,
         content: "Hello! I'm Nomad's Compass, your AI travel planning assistant. I'm here to help you create the perfect adventure. Where would you like to explore?",
         sender: 'ai',
-        timestamp: new Date(),
+        created_at: new Date().toISOString(),
       }]);
     }
   };
 
-  // Create a new chat session
   const createNewSession = async () => {
+    if (!user) return;
+
     try {
       const { data: newSession, error } = await supabase
         .from('chat_sessions')
         .insert([{
-          title: 'New Travel Plan',
-          is_saved: false
+          user_id: user.id,
+          title: 'New Travel Plan'
         }])
         .select()
         .single();
 
       if (error) throw error;
 
-      const formattedSession: ChatSession = {
-        id: newSession.id,
-        title: newSession.title || 'New Travel Plan',
-        created_at: new Date(newSession.created_at || ''),
-        updated_at: new Date(newSession.updated_at || ''),
-        is_saved: newSession.is_saved || false
-      };
-
-      setSessions(prev => [formattedSession, ...prev]);
-      setCurrentSessionId(formattedSession.id);
-      setMessages([]); // Clear messages, they will be loaded by useEffect
+      setSessions(prev => [newSession, ...prev]);
+      setCurrentSessionId(newSession.id);
+      setMessages([]);
+      setItineraryData(null);
     } catch (error) {
       console.error('Error creating new session:', error);
-      // Fallback to local state
-      const fallbackSession: ChatSession = {
-        id: Date.now().toString(),
-        title: 'New Travel Plan',
-        created_at: new Date(),
-        updated_at: new Date(),
-        is_saved: false
-      };
-      setSessions(prev => [fallbackSession, ...prev]);
-      setCurrentSessionId(fallbackSession.id);
     }
   };
 
-  // Send a message and get AI response
   const sendMessage = async (content: string) => {
+    if (!currentSessionId || !user) return;
+
     try {
-      // Insert user message
       const { data: userMessage, error: userError } = await supabase
         .from('chat_messages')
         .insert([{
@@ -186,20 +171,18 @@ const ChatPage: React.FC = () => {
 
       if (userError) throw userError;
 
-      // Add user message to UI immediately
       const formattedUserMessage: Message = {
         id: userMessage.id,
+        session_id: userMessage.session_id,
         content: userMessage.content,
         sender: 'user',
-        timestamp: new Date(userMessage.created_at || '')
+        created_at: userMessage.created_at
       };
       setMessages(prev => [...prev, formattedUserMessage]);
       setIsLoading(true);
 
-      // Get AI response from edge function
       try {
-        // Prepare conversation history for context
-        const conversationHistory = messages.filter(msg => msg.sender !== 'user' || msg.id !== userMessage.id);
+        const conversationHistory = messages;
         
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
           method: 'POST',
@@ -220,13 +203,13 @@ const ChatPage: React.FC = () => {
         const data = await response.json();
         
         if (data.error) {
-          // Handle specific error types
           if (data.error === 'quota_exceeded') {
             const quotaErrorMessage: Message = {
               id: Date.now().toString(),
-              content: "I apologize, but I'm currently experiencing high demand and have reached my usage limits. This is a temporary issue that should resolve soon. Please try again in a few minutes, or feel free to continue planning your trip and I'll assist you once service is restored!",
+              session_id: currentSessionId,
+              content: "I apologize, but I'm currently experiencing high demand and have reached my usage limits. This is a temporary issue that should resolve soon. Please try again in a few minutes!",
               sender: 'ai',
-              timestamp: new Date(),
+              created_at: new Date().toISOString(),
             };
             setMessages(prev => [...prev, quotaErrorMessage]);
             return;
@@ -236,7 +219,6 @@ const ChatPage: React.FC = () => {
 
         const aiContent = data.response;
         
-        // Save AI response to database
         const { data: aiMessage, error: aiError } = await supabase
           .from('chat_messages')
           .insert([{
@@ -251,19 +233,20 @@ const ChatPage: React.FC = () => {
 
         const formattedAiMessage: Message = {
           id: aiMessage.id,
+          session_id: aiMessage.session_id,
           content: aiMessage.content,
           sender: 'ai',
-          timestamp: new Date(aiMessage.created_at || '')
+          created_at: aiMessage.created_at
         };
         setMessages(prev => [...prev, formattedAiMessage]);
       } catch (error) {
         console.error('Error getting AI response:', error);
-        // Fallback to error message
         const errorMessage: Message = {
           id: Date.now().toString(),
-          content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment. In the meantime, I'd be happy to help you plan your travel adventure once the connection is restored!",
+          session_id: currentSessionId,
+          content: "I apologize, but I'm having trouble connecting right now. Please try again in a moment!",
           sender: 'ai',
-          timestamp: new Date(),
+          created_at: new Date().toISOString(),
         };
         setMessages(prev => [...prev, errorMessage]);
       } finally {
@@ -272,68 +255,128 @@ const ChatPage: React.FC = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       setIsLoading(false);
-      // Fallback to local state
-      const fallbackUserMessage: Message = {
-        id: Date.now().toString(),
-        content,
-        sender: 'user',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, fallbackUserMessage]);
     }
   };
 
-  // Save itinerary to database
-  const saveItinerary = async (title: string) => {
+  const convertItinerary = async () => {
+    if (!currentSessionId || messages.length === 0) return;
+
+    setIsConverting(true);
     try {
-      // Update session as saved
-      const { error: sessionError } = await supabase
+      // Get the latest AI message that contains itinerary information
+      const aiMessages = messages.filter(m => m.sender === 'ai');
+      const latestItinerary = aiMessages[aiMessages.length - 1]?.content || '';
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-itinerary`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itineraryText: latestItinerary
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.message || data.error);
+      }
+
+      setItineraryData(data.itinerary);
+    } catch (error) {
+      console.error('Error converting itinerary:', error);
+      alert('Failed to convert itinerary. Please try again.');
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
+  const renameSession = async (sessionId: string, newTitle: string) => {
+    try {
+      const { error } = await supabase
         .from('chat_sessions')
-        .update({ 
-          title, 
-          is_saved: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentSessionId);
+        .update({ title: newTitle })
+        .eq('id', sessionId);
 
-      if (sessionError) throw sessionError;
+      if (error) throw error;
 
-      // Save complete itinerary
-      const { error: itineraryError } = await supabase
+      setSessions(prev => prev.map(session => 
+        session.id === sessionId 
+          ? { ...session, title: newTitle }
+          : session
+      ));
+    } catch (error) {
+      console.error('Error renaming session:', error);
+    }
+  };
+
+  const saveItinerary = async () => {
+    if (!currentSessionId || !itineraryData) return;
+
+    try {
+      const { error } = await supabase
         .from('itineraries')
-        .insert([{
-          title,
-          content: messages,
-          session_id: currentSessionId
+        .upsert([{
+          session_id: currentSessionId,
+          is_public: false,
+          itinerary_data_json: itineraryData
         }]);
 
-      if (itineraryError) throw itineraryError;
-
-      // Update local state
-      setSessions(prev => prev.map(session => 
-        session.id === currentSessionId 
-          ? { ...session, title, is_saved: true }
-          : session
-      ));
-      
-      setShowSaveModal(false);
-      console.log('Itinerary saved successfully!');
+      if (error) throw error;
+      alert('Itinerary saved successfully!');
     } catch (error) {
       console.error('Error saving itinerary:', error);
-      // Still close modal and update local state as fallback
-      setSessions(prev => prev.map(session => 
-        session.id === currentSessionId 
-          ? { ...session, title, is_saved: true }
-          : session
-      ));
-      setShowSaveModal(false);
+      alert('Failed to save itinerary. Please try again.');
     }
   };
 
-  // Switch to a different session
-  const switchToSession = (sessionId: string) => {
-    setCurrentSessionId(sessionId);
+  const shareItinerary = async () => {
+    if (!currentSessionId || !itineraryData) return;
+
+    try {
+      const { error } = await supabase
+        .from('itineraries')
+        .upsert([{
+          session_id: currentSessionId,
+          is_public: true,
+          itinerary_data_json: itineraryData
+        }]);
+
+      if (error) throw error;
+      alert('Itinerary shared to community successfully!');
+    } catch (error) {
+      console.error('Error sharing itinerary:', error);
+      alert('Failed to share itinerary. Please try again.');
+    }
   };
+
+  const mailItinerary = async () => {
+    if (!itineraryData || !user) return;
+    
+    // This would integrate with an email service
+    alert(`Itinerary would be sent to ${user.email} (Email service integration needed)`);
+  };
+
+  const signOut = () => {
+    AuthService.signOut();
+    navigate('/');
+  };
+
+  if (showAuthModal) {
+    return (
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => navigate('/')}
+        onAuth={handleAuth}
+      />
+    );
+  }
 
   if (isLoadingSessions) {
     return (
@@ -349,9 +392,9 @@ const ChatPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="h-screen bg-surface flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-4 flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           <Link 
             to="/" 
@@ -370,117 +413,57 @@ const ChatPage: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={createNewSession}
-            className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <Plus className="w-4 h-4 text-secondary" />
-            <span className="hidden sm:inline font-lato text-sm text-secondary">New Chat</span>
-          </button>
-          <button
-            onClick={() => setShowSaveModal(true)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            disabled={messages.length <= 1}
-          >
-            <Bookmark className="w-5 h-5 text-secondary" />
-          </button>
+          {user && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
+                <User className="w-4 h-4 text-gray-500" />
+                <span className="font-lato text-sm text-gray-700">{user.email}</span>
+              </div>
+              <button
+                onClick={signOut}
+                className="px-3 py-1 text-sm font-lato text-gray-600 hover:text-secondary transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Chat Interface */}
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Sidebar - hidden on mobile */}
-        <div className="hidden lg:block w-80 bg-white border-r border-gray-200 p-6">
-          <div className="space-y-6">
-            {/* Current Session Info */}
-            <div>
-              <h2 className="font-poppins font-bold text-secondary text-lg mb-4">
-                Travel Planning
-              </h2>
-              <div className="space-y-2">
-                <div className="p-3 bg-primary/10 rounded-lg border-l-4 border-primary">
-                  <h3 className="font-poppins font-semibold text-secondary">
-                    {sessions.find(s => s.id === currentSessionId)?.title || 'Current Session'}
-                  </h3>
-                  <p className="text-sm text-gray-600 font-lato">
-                    {sessions.find(s => s.id === currentSessionId)?.is_saved ? 'Saved itinerary' : 'Planning your adventure'}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            {/* Recent Sessions */}
-            {sessions.length > 1 && (
-              <div>
-                <h3 className="font-poppins font-semibold text-secondary mb-3">Recent Sessions</h3>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {sessions.slice(1, 6).map((session) => (
-                    <button
-                      key={session.id}
-                      onClick={() => switchToSession(session.id)}
-                      className={`w-full p-2 text-left rounded-lg transition-colors ${
-                        session.id === currentSessionId 
-                          ? 'bg-primary/10 border border-primary/20' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-lato text-sm text-secondary truncate">
-                          {session.title}
-                        </span>
-                        {session.is_saved && (
-                          <Bookmark className="w-3 h-3 text-primary flex-shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 font-lato">
-                        {session.updated_at.toLocaleDateString()}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Quick Prompts */}
-            <div className="space-y-3">
-              <h3 className="font-poppins font-semibold text-secondary">Quick Prompts</h3>
-              <div className="space-y-2">
-                {[
-                  "Plan a 7-day trip to Japan",
-                  "Budget backpacking in Europe",
-                  "Family vacation ideas",
-                  "Romantic getaway destinations"
-                ].map((prompt, index) => (
-                  <button
-                    key={index}
-                    onClick={() => sendMessage(prompt)}
-                    className="w-full p-3 text-left bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors font-lato text-sm"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Chat Sidebar */}
+        <ChatSidebar
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSessionSelect={setCurrentSessionId}
+          onNewSession={createNewSession}
+          onRenameSession={renameSession}
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
 
-        {/* Main Chat Area */}
-        <div className="flex-1">
+        {/* Chat Window */}
+        <div className="flex-1 flex flex-col">
           <ChatWindow 
             messages={messages}
             isLoading={isLoading}
             onSendMessage={sendMessage}
           />
         </div>
-      </div>
 
-      {/* Save Modal */}
-      {showSaveModal && (
-        <SaveModal
-          onSave={saveItinerary}
-          onClose={() => setShowSaveModal(false)}
-        />
-      )}
+        {/* Itinerary Panel */}
+        <div className="w-96 border-l border-gray-200">
+          <ItineraryPanel
+            itineraryData={itineraryData}
+            isConverting={isConverting}
+            onConvert={convertItinerary}
+            onSave={saveItinerary}
+            onShare={shareItinerary}
+            onMail={mailItinerary}
+          />
+        </div>
+      </div>
     </div>
   );
 };

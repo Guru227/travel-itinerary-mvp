@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
-import { Message } from '../pages/ChatPage';
+import { Message } from '../types';
 import MessageComponent from './Message';
 
 interface ChatWindowProps {

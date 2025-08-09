@@ -1,5 +1,5 @@
 import React from 'react';
-import { Message } from '../pages/ChatPage';
+import { Message } from '../types';
 
 interface MessageProps {
   message: Message;
@@ -29,7 +29,7 @@ const MessageComponent: React.FC<MessageProps> = ({ message }) => {
           </p>
         </div>
         <p className={`text-xs text-gray-500 font-lato mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
       </div>
     </div>
