@@ -13,6 +13,7 @@ export interface ChatSession {
   number_of_travelers?: number;
   created_at: string;
   updated_at: string;
+  phase?: 'gathering' | 'building';
 }
 
 export interface Itinerary {

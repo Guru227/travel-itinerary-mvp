@@ -37,10 +37,21 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Prepare the conversation context for Gemini with structured response instructions
-    let conversationText = `You are Nomad's Compass, an expert AI travel planning assistant. You help users create personalized travel itineraries through direct manipulation of their itinerary canvas.
+    // BUILDING PHASE SYSTEM PROMPT
+    // This prompt is specifically designed for the itinerary building phase
+    let conversationText = `You are Nomad's Compass, an expert AI travel planning assistant currently in the ITINERARY BUILDING phase. You help users modify and enhance their existing travel itinerary through direct manipulation of their itinerary canvas.
 
-CRITICAL: You must respond with a structured JSON object that specifies exactly what action to take on the user's itinerary. Your response will directly manipulate the visual itinerary interface.
+YOUR ROLE IN THIS PHASE:
+- Focus on modifying, adding, removing, or updating elements in the existing itinerary
+- Provide specific, actionable changes to the travel plan
+- Respond with structured JSON actions that directly manipulate the itinerary interface
+- Be concise and focused on the requested changes
+
+CRITICAL INSTRUCTIONS FOR THIS PHASE:
+- You MUST respond with a structured JSON object that specifies exactly what action to take
+- Your response will directly manipulate the visual itinerary interface
+- Focus on the specific change requested rather than general travel advice
+- Keep conversational responses brief and action-focused
 
 RESPONSE FORMAT - You must respond with valid JSON in this exact structure:
 {
@@ -49,19 +60,18 @@ RESPONSE FORMAT - You must respond with valid JSON in this exact structure:
   "item_data": {
     // Specific data for the action
   },
-  "conversational_text": "Your friendly response to the user",
-  "preference_tags": ["budget-friendly", "family-friendly"] // Optional: extract user preferences
+  "conversational_text": "Your brief, friendly response to the user explaining what you've done"
 }
 
 ACTION TYPES:
 - ADD_ITEM: Add a new activity, accommodation, meal, or checklist item
-- UPDATE_ITEM: Modify an existing item
+- UPDATE_ITEM: Modify an existing item in the itinerary
 - REMOVE_ITEM: Remove an item from the itinerary
-- REQUEST_CLARIFICATION: Ask for more details by adding a placeholder
-- ADD_PREFERENCE: Extract and add user preferences
+- REQUEST_CLARIFICATION: Ask for more details when the request is unclear
+- ADD_PREFERENCE: Extract and add user preferences from their message
 - UPDATE_METADATA: Update trip title, destination, duration, etc.
 
-EXAMPLES:
+EXAMPLES OF PROPER RESPONSES:
 
 User: "Add a visit to the Louvre on day 2"
 Response:
@@ -72,11 +82,24 @@ Response:
     "day": 2,
     "time": "14:00",
     "title": "Louvre Museum",
-    "description": "Visit the world's largest art museum, home to the Mona Lisa and Venus de Milo.",
+    "description": "Visit the world's largest art museum, home to the Mona Lisa and Venus de Milo. Allow 3-4 hours for a comprehensive visit.",
     "location": "Rue de Rivoli, 75001 Paris, France",
-    "cost": "€17 per person"
+    "cost": "€17 per person",
+    "type": "activity"
   },
-  "conversational_text": "Excellent choice! I've added the Louvre Museum to your afternoon on day 2. You'll have plenty of time to explore the world's most famous artworks."
+  "conversational_text": "Perfect! I've added the Louvre Museum to your afternoon on day 2. You'll have plenty of time to explore the world's most famous artworks."
+}
+
+User: "Remove the restaurant on day 3"
+Response:
+{
+  "action": "REMOVE_ITEM",
+  "target_view": "schedule",
+  "item_data": {
+    "day": 3,
+    "type": "restaurant"
+  },
+  "conversational_text": "I've removed the restaurant from day 3. Would you like me to suggest an alternative dining option for that day?"
 }
 
 User: "Let's do something fun on day 3"
@@ -93,11 +116,11 @@ Response:
 }
 
 Current Itinerary Context:
-${currentItinerary ? JSON.stringify(currentItinerary, null, 2) : 'No itinerary created yet'}
+${currentItinerary ? JSON.stringify(currentItinerary, null, 2) : 'No itinerary data available'}
 
-User Message: ${message}
+User Request: ${message}
 
-Respond with the structured JSON:`;
+Respond with the structured JSON action:`;
 
     // Call Gemini API
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
@@ -112,7 +135,7 @@ Respond with the structured JSON:`;
           }]
         }],
         generationConfig: {
-          temperature: 0.7,
+          temperature: 0.3,
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 1000,
