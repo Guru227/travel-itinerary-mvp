@@ -439,22 +439,7 @@ const ChatPage: React.FC = () => {
         {/* Right Panel - Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Itinerary Canvas or Chat Messages */}
-          <div className="flex-1 overflow-hidden">
-            {itineraryData ? (
-              <LivingItineraryCanvas
-                itineraryData={itineraryData}
-                sessionId={currentSessionId || ''}
-                onSendMessage={async (message: string) => {
-                  await sendMessage(message);
-                  return {
-                    action: 'REQUEST_CLARIFICATION',
-                    target_view: 'schedule',
-                    conversational_text: 'Message sent successfully!'
-                  };
-                }}
-                isLoading={isLoading}
-              />
-            ) : (
+            <>
               <div className="flex-1 overflow-y-auto p-6">
                 {messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center">
@@ -533,6 +518,22 @@ const ChatPage: React.FC = () => {
                         <div className="bg-white border border-gray-200 px-4 py-3 rounded-lg">
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <ChatInput
+                onSendMessage={sendMessage}
+                isLoading={isLoading}
+                placeholder="Describe your dream trip and I'll help you plan it..."
+                disabled={!currentSessionId}
+              />
+            </>
                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                             <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                           </div>
