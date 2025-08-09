@@ -64,6 +64,7 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     if (currentSessionId && user) {
       loadMessages(currentSessionId);
+      loadExistingItinerary(currentSessionId);
     }
   }, [currentSessionId, user]);
 
@@ -106,6 +107,28 @@ const ChatPage: React.FC = () => {
       await createNewSession();
     } finally {
       setIsLoadingSessions(false);
+    }
+  };
+
+  const loadExistingItinerary = async (sessionId: string) => {
+    try {
+      const { data: existingItinerary, error } = await supabase
+        .from('itineraries')
+        .select('*')
+        .eq('session_id', sessionId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading existing itinerary:', error);
+        return;
+      }
+
+      if (existingItinerary && existingItinerary.content) {
+        console.log('Found existing itinerary for session:', sessionId);
+        setItineraryData(existingItinerary.content);
+      }
+    } catch (error) {
+      console.error('Error loading existing itinerary:', error);
     }
   };
 
