@@ -8,7 +8,7 @@ import ConversationStrip from './ConversationStrip';
 import PreferenceTags from './PreferenceTags';
 
 interface LivingItineraryCanvasProps {
-  itineraryData: ItineraryData;
+  itineraryData: ItineraryData | null;
   lastAiMessage?: string;
   onSendMessage: (message: string) => void;
   isLoading: boolean;
@@ -20,6 +20,24 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
   onSendMessage,
   isLoading
 }) => {
+  // Handle null itineraryData
+  if (!itineraryData) {
+    return (
+      <div className="flex flex-col h-full">
+        <ConversationStrip
+          lastAiMessage={lastAiMessage}
+          onSendMessage={onSendMessage}
+          isLoading={isLoading}
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <p>Waiting for itinerary data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [activeView, setActiveView] = useState<'schedule' | 'checklist' | 'map'>('schedule');
 
   // Transform itineraryData into ItineraryItem[] format
@@ -37,10 +55,10 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
               id: `day-${dayNumber}-activity-${activityIndex}`,
               type: 'activity',
               day: dayNumber,
-              time: activity.time,
+              time: activity.time || '',
               status: 'confirmed',
               data: {
-                title: activity.name || activity.title || 'Activity',
+                title: activity.title || 'Activity',
                 description: activity.description,
                 location: activity.location,
                 cost: activity.cost,
@@ -60,7 +78,7 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
           type: 'checklist',
           status: item.completed ? 'completed' : 'pending',
           data: {
-            title: item.item || item.title || 'Checklist Item',
+            title: item.task || 'Checklist Item',
             description: item.description,
             category: item.category
           }
