@@ -63,7 +63,7 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: { sessionId }
+        body: JSON.stringify({ sessionId })
       });
 
       if (!response.ok) {
