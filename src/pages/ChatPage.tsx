@@ -439,119 +439,99 @@ const ChatPage: React.FC = () => {
         {/* Right Panel - Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Itinerary Canvas or Chat Messages */}
-            <>
-              <div className="flex-1 overflow-y-auto p-6">
-                {messages.length === 0 ? (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center max-w-md mx-auto">
-                      <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 mx-auto">
-                        <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/20">
-                          <img 
-                            src="/images/nomad.png" 
-                            alt="Nomad's Compass Avatar" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                      <h2 className="font-poppins font-bold text-2xl text-secondary mb-4">
-                        Ready to Plan Your Adventure?
-                      </h2>
-                      <p className="font-lato text-gray-600 mb-6">
-                        Tell me about your dream trip and I'll help you create the perfect itinerary. 
-                        Try something like "Plan a 5-day trip to Tokyo for 2 people" or "I want to visit Paris on a budget".
-                      </p>
+          <div className="flex-1 overflow-y-auto p-6">
+            {messages.length === 0 ? (
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center max-w-md mx-auto">
+                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 mx-auto">
+                    <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/20">
+                      <img 
+                        src="/images/nomad.png" 
+                        alt="Nomad's Compass Avatar" 
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   </div>
-                ) : (
-                  <div className="space-y-6 max-w-4xl mx-auto">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex gap-4 ${
-                          message.sender === 'user' ? 'justify-end' : 'justify-start'
-                        }`}
-                      >
-                        {message.sender === 'ai' && (
-                          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
-                            <img 
-                              src="/images/nomad.png" 
-                              alt="Nomad's Compass Avatar" 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <div
-                          className={`max-w-3xl px-4 py-3 rounded-lg font-lato leading-relaxed ${
-                            message.sender === 'user'
-                              ? 'bg-primary text-white'
-                              : 'bg-white border border-gray-200 text-secondary'
-                          }`}
-                        >
-                          <div className="whitespace-pre-wrap">{message.content}</div>
-                          <div className={`text-xs mt-2 ${
-                            message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
-                          }`}>
-                            {new Date(message.created_at).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </div>
-                        </div>
-                        {message.sender === 'user' && (
-                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-white font-poppins font-bold text-sm">
-                              {user?.email?.charAt(0).toUpperCase() || 'U'}
-                            </span>
-                          </div>
-                        )}
+                  <h2 className="font-poppins font-bold text-2xl text-secondary mb-4">
+                    Ready to Plan Your Adventure?
+                  </h2>
+                  <p className="font-lato text-gray-600 mb-6">
+                    Tell me about your dream trip and I'll help you create the perfect itinerary. 
+                    Try something like "Plan a 5-day trip to Tokyo for 2 people" or "I want to visit Paris on a budget".
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6 max-w-4xl mx-auto">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex gap-4 ${
+                      message.sender === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {message.sender === 'ai' && (
+                      <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
+                        <img 
+                          src="/images/nomad.png" 
+                          alt="Nomad's Compass Avatar" 
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                    ))}
-                    {isLoading && (
-                      <div className="flex gap-4 justify-start">
-                        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
-                          <img 
-                            src="/images/nomad.png" 
-                            alt="Nomad's Compass Avatar" 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="bg-white border border-gray-200 px-4 py-3 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          </div>
-                        </div>
+                    )}
+                    <div
+                      className={`max-w-3xl px-4 py-3 rounded-lg font-lato leading-relaxed ${
+                        message.sender === 'user'
+                          ? 'bg-primary text-white'
+                          : 'bg-white border border-gray-200 text-secondary'
+                      }`}
+                    >
+                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      <div className={`text-xs mt-2 ${
+                        message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
+                      }`}>
+                        {new Date(message.created_at).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                    {message.sender === 'user' && (
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-poppins font-bold text-sm">
+                          {user?.email?.charAt(0).toUpperCase() || 'U'}
+                        </span>
                       </div>
                     )}
                   </div>
-                )}
-              </div>
-              <ChatInput
-                onSendMessage={sendMessage}
-                isLoading={isLoading}
-                placeholder="Describe your dream trip and I'll help you plan it..."
-                disabled={!currentSessionId}
-              />
-            </>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          </div>
-                        </div>
+                ))}
+                {isLoading && (
+                  <div className="flex gap-4 justify-start">
+                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
+                      <img 
+                        src="/images/nomad.png" 
+                        alt="Nomad's Compass Avatar" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="bg-white border border-gray-200 px-4 py-3 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
-              {/* Chat Input for non-itinerary view */}
-              <ChatInput
-                onSendMessage={sendMessage}
-                isLoading={isLoading}
-                placeholder="Describe your dream trip and I'll help you plan it..."
-                disabled={!currentSessionId}
-              />
             )}
           </div>
+          <ChatInput
+            onSendMessage={sendMessage}
+            isLoading={isLoading}
+            placeholder="Describe your dream trip and I'll help you plan it..."
+            disabled={!currentSessionId}
+          />
         </div>
       </div>
     </div>
