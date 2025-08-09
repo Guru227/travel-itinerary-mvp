@@ -368,9 +368,10 @@ const ChatPage: React.FC = () => {
       const { error } = await supabase
         .from('itineraries')
         .upsert([{
+          title: itineraryData.title,
           session_id: currentSessionId,
           is_public: false,
-          itinerary_data_json: itineraryData
+          content: itineraryData
         }]);
 
       if (error) throw error;
@@ -388,9 +389,10 @@ const ChatPage: React.FC = () => {
       const { error } = await supabase
         .from('itineraries')
         .upsert([{
+          title: itineraryData.title,
           session_id: currentSessionId,
           is_public: true,
-          itinerary_data_json: itineraryData
+          content: itineraryData
         }]);
 
       if (error) throw error;
