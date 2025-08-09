@@ -77,3 +77,39 @@ export interface Message {
   sender: 'user' | 'ai';
   created_at: string;
 }
+
+// New types for the living itinerary system
+export interface AIResponse {
+  action: 'ADD_ITEM' | 'UPDATE_ITEM' | 'REMOVE_ITEM' | 'ADD_PREFERENCE' | 'REMOVE_PREFERENCE' | 'REQUEST_CLARIFICATION' | 'UPDATE_METADATA';
+  target_view: 'schedule' | 'checklist' | 'map' | 'preferences';
+  item_data?: any;
+  conversational_text: string;
+  preference_tags?: string[];
+  clarification_prompt?: string;
+}
+
+export interface PreferenceTag {
+  id: string;
+  label: string;
+  category: 'budget' | 'cuisine' | 'pace' | 'interests' | 'accommodation' | 'transport';
+  removable: boolean;
+}
+
+export interface ItineraryItem {
+  id: string;
+  type: 'activity' | 'accommodation' | 'transport' | 'meal' | 'checklist_item';
+  status: 'confirmed' | 'suggested' | 'placeholder';
+  data: any;
+  day?: number;
+  time?: string;
+  created_at: string;
+}
+
+export interface ContextualBubble {
+  id: string;
+  text: string;
+  position: { x: number; y: number };
+  targetItemId: string;
+  visible: boolean;
+  created_at: string;
+}
