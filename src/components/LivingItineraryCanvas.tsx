@@ -107,10 +107,6 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
       {/* FIXED: Only include ConversationStrip, no duplicate input */}
       <ConversationStrip
         latestAiMessage={latestAiMessage || ''}
-        onSendMessage={onSendMessage}
-        isLoading={isLoading}
-        placeholder="Tell me what you'd like to add or change..."
-        disabled={false}
       />
 
       {/* Preference Tags - Only show if we have preferences */}

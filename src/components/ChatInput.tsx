@@ -66,12 +66,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <button
           type="submit"
           disabled={!inputValue.trim() || isLoading || disabled}
-          className="bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-lg transition-colors flex-shrink-0 flex items-center justify-center min-w-[48px]"
+          className="bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors flex-shrink-0 flex items-center justify-center gap-2 font-poppins font-semibold min-w-[100px]"
         >
           {isLoading ? (
-            <Loader className="w-5 h-5 animate-spin" />
+            <>
+              <Loader className="w-4 h-4 animate-spin" />
+              <span>Loading...</span>
+            </>
           ) : (
-            <Send className="w-5 h-5" />
+            <>
+              <Send className="w-4 h-4" />
+              <span>Send</span>
+            </>
           )}
         </button>
       </form>

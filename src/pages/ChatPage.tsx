@@ -270,10 +270,11 @@ const ChatPage: React.FC = () => {
         const structuredResponse = data.response as AIResponse;
         const aiResponseText = structuredResponse.conversational_text;
         
-        // FIXED: Handle itinerary updates properly
+        // FIXED: Handle itinerary updates with immutable state updates
         if (structuredResponse.action === 'GENERATE_ITINERARY' && structuredResponse.itinerary_data) {
           console.log('Updating itinerary data:', structuredResponse.itinerary_data);
-          setItineraryData(structuredResponse.itinerary_data);
+          // Create a new object to ensure React detects the state change
+          setItineraryData({ ...structuredResponse.itinerary_data });
           
           // Save the itinerary to the database
           await supabase
@@ -287,6 +288,32 @@ const ChatPage: React.FC = () => {
               onConflict: 'session_id'
             });
 
+        
+        // FIXED: Handle other itinerary modification actions with immutable updates
+        if (structuredResponse.action === 'ADD_ITEM' || 
+            structuredResponse.action === 'UPDATE_ITEM' || 
+            structuredResponse.action === 'REMOVE_ITEM') {
+          if (structuredResponse.itinerary_data) {
+            console.log('Updating itinerary with modification:', structuredResponse.action);
+            // Create a new object to ensure React detects the state change
+            setItineraryData(prevData => ({
+              ...prevData,
+              ...structuredResponse.itinerary_data
+            }));
+            
+            // Save the updated itinerary to the database
+            await supabase
+              .from('itineraries')
+              .upsert([{
+                session_id: currentSessionId,
+                title: structuredResponse.itinerary_data.title || itineraryData?.title || 'Travel Itinerary',
+                content: { ...itineraryData, ...structuredResponse.itinerary_data },
+                is_public: false
+              }], {
+                onConflict: 'session_id'
+              });
+          }
+        }
           // Update the session with metadata
           await supabase
             .from('chat_sessions')
