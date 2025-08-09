@@ -17,8 +17,9 @@ export interface ChatSession {
 export interface Itinerary {
   id: string;
   session_id: string;
+  user_id: string | null;
   is_public: boolean;
-  itinerary_data_json: ItineraryData | null;
+  content: ItineraryData | null;
   created_at: string;
 }
 
