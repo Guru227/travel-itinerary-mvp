@@ -22,9 +22,14 @@ export interface Itinerary {
   is_public: boolean;
   content: ItineraryData | null;
   created_at: string;
-  user?: {
-    nickname?: string | null;
-    email: string;
+  chat_sessions?: {
+    title: string;
+    summary?: string;
+    number_of_travelers?: number;
+    users: {
+      nickname?: string | null;
+      email: string;
+    };
   };
 }
 
