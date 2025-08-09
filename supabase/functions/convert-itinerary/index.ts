@@ -114,7 +114,7 @@ Return ONLY the JSON object, no additional text or formatting.`;
     try {
       // Clean the response to extract JSON
       let jsonString = aiResponse.match(/\{[\s\S]*\}/)?.[0]
-      if (!jsonMatch) {
+      if (!jsonString) {
         throw new Error('No JSON found in response')
       }
       
