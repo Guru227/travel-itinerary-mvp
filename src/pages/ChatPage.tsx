@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ChatHistoryPanel from '../components/ChatHistoryPanel';
+import ChatInput from '../components/ChatInput';
 import LivingItineraryCanvas from '../components/LivingItineraryCanvas';
 import AuthModal from '../components/AuthModal';
 import { supabase } from '../lib/supabase';
@@ -10,7 +12,7 @@ import { User as UserType, ChatSession, Message, ItineraryData, AIResponse } fro
 
 const ChatPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sessionParam = searchParams.get('session');
 
   const [user, setUser] = useState<UserType | null>(null);
@@ -19,6 +21,8 @@ const ChatPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [itineraryData, setItineraryData] = useState<ItineraryData | null>(null);
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     checkAuth();
@@ -28,7 +32,13 @@ const ChatPage: React.FC = () => {
     if (user) {
       initializeSession();
     }
-  }, [user]);
+  }, [user, sessionParam]);
+
+  useEffect(() => {
+    if (currentSessionId && currentSessionId !== sessionParam) {
+      setSearchParams({ session: currentSessionId });
+    }
+  }, [currentSessionId, sessionParam, setSearchParams]);
 
   const checkAuth = async () => {
     const currentUser = await AuthService.getCurrentUser();
@@ -50,7 +60,7 @@ const ChatPage: React.FC = () => {
     try {
       if (currentSessionId) {
         // Load existing session
-        await loadExistingItinerary(currentSessionId);
+        await loadExistingSession(currentSessionId);
       } else {
         // Create new session
         await createNewSession();
@@ -63,18 +73,27 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const loadExistingItinerary = async (sessionId: string) => {
+  const loadExistingSession = async (sessionId: string) => {
     try {
-      const { data: itinerariesData, error } = await supabase
+      // Load session data
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('chat_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      // Load existing itinerary
+      const { data: itinerariesData, error: itineraryError } = await supabase
         .from('itineraries')
         .select('*')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: false })
         .limit(1);
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading existing itinerary:', error);
-        return;
+      if (itineraryError && itineraryError.code !== 'PGRST116') {
+        console.error('Error loading existing itinerary:', itineraryError);
       }
 
       if (itinerariesData && itinerariesData.length > 0 && itinerariesData[0].content) {
@@ -82,8 +101,12 @@ const ChatPage: React.FC = () => {
         console.log('Found existing itinerary for session:', sessionId);
         setItineraryData(existingItinerary.content);
       }
+
+      // Load messages
+      await loadMessages(sessionId);
     } catch (error) {
-      console.error('Error loading existing itinerary:', error);
+      console.error('Error loading existing session:', error);
+      throw error;
     }
   };
 
@@ -151,12 +174,23 @@ const ChatPage: React.FC = () => {
 
       setCurrentSessionId(newSession.id);
       setItineraryData(null);
+      setMessages([]);
+      
+      // Load initial welcome message
+      await loadMessages(newSession.id);
     } catch (error) {
       console.error('Error creating new session:', error);
     }
   };
 
-  const sendMessage = async (content: string): Promise<AIResponse> => {
+  const handleSessionSelect = (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    setItineraryData(null);
+    setMessages([]);
+    loadExistingSession(sessionId);
+  };
+
+  const sendMessage = async (content: string): Promise<void> => {
     if (!currentSessionId || !user) {
       throw new Error('No active session');
     }
@@ -170,15 +204,32 @@ const ChatPage: React.FC = () => {
           content,
           sender: 'user'
         }])
-        .select();
+        .select()
+        .single();
 
       if (userError) throw userError;
+
+      // Add user message to local state
+      const newUserMessage: Message = {
+        id: userMessage.id,
+        session_id: userMessage.session_id,
+        content: userMessage.content,
+        sender: 'user',
+        created_at: userMessage.created_at
+      };
+      setMessages(prev => [...prev, newUserMessage]);
 
       setIsLoading(true);
 
       try {
-        // Call the new living-chat edge function
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/living-chat`, {
+        // Get conversation history for context
+        const conversationHistory = messages.map(msg => ({
+          sender: msg.sender,
+          content: msg.content
+        }));
+
+        // Call the chat edge function
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
@@ -186,8 +237,7 @@ const ChatPage: React.FC = () => {
           },
           body: JSON.stringify({
             message: content,
-            sessionId: currentSessionId,
-            currentItinerary: itineraryData
+            conversationHistory
           }),
         });
 
@@ -199,38 +249,58 @@ const ChatPage: React.FC = () => {
         
         if (data.error) {
           if (data.error === 'quota_exceeded') {
-            return {
-              action: 'REQUEST_CLARIFICATION',
-              target_view: 'schedule',
-              conversational_text: "I apologize, but I'm currently experiencing high demand and have reached my usage limits. This is a temporary issue that should resolve soon. Please try again in a few minutes!"
-            };
+            throw new Error("I apologize, but I'm currently experiencing high demand and have reached my usage limits. This is a temporary issue that should resolve soon. Please try again in a few minutes!");
           }
           throw new Error(data.message || data.error);
         }
 
-        const aiResponse: AIResponse = data.response;
+        const aiResponseText = data.response;
         
         // Save AI response to database
         const { data: aiMessage, error: aiError } = await supabase
           .from('chat_messages')
           .insert([{
             session_id: currentSessionId,
-            content: aiResponse.conversational_text,
+            content: aiResponseText,
             sender: 'ai'
           }])
-          .select();
+          .select()
+          .single();
 
         if (aiError) throw aiError;
 
-        return aiResponse;
+        // Add AI message to local state
+        const newAiMessage: Message = {
+          id: aiMessage.id,
+          session_id: aiMessage.session_id,
+          content: aiMessage.content,
+          sender: 'ai',
+          created_at: aiMessage.created_at
+        };
+        setMessages(prev => [...prev, newAiMessage]);
+
+        // Check if the response contains itinerary data and try to convert it
+        if (aiResponseText.length > 200 && (
+          aiResponseText.toLowerCase().includes('itinerary') ||
+          aiResponseText.toLowerCase().includes('day 1') ||
+          aiResponseText.toLowerCase().includes('schedule') ||
+          aiResponseText.toLowerCase().includes('trip')
+        )) {
+          await tryConvertToItinerary(aiResponseText);
+        }
         
       } catch (error) {
         console.error('Error getting AI response:', error);
-        return {
-          action: 'REQUEST_CLARIFICATION',
-          target_view: 'schedule',
-          conversational_text: "I apologize, but I'm having trouble connecting right now. Please try again in a moment!"
+        
+        // Add error message to chat
+        const errorMessage: Message = {
+          id: `error_${Date.now()}`,
+          session_id: currentSessionId,
+          content: error instanceof Error ? error.message : "I apologize, but I'm having trouble connecting right now. Please try again in a moment!",
+          sender: 'ai',
+          created_at: new Date().toISOString()
         };
+        setMessages(prev => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
       }
@@ -238,6 +308,69 @@ const ChatPage: React.FC = () => {
       console.error('Error sending message:', error);
       setIsLoading(false);
       throw error;
+    }
+  };
+
+  const tryConvertToItinerary = async (itineraryText: string) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-itinerary`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itineraryText
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to convert itinerary:', response.status);
+        return;
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Error converting itinerary:', data.error);
+        return;
+      }
+
+      const convertedItinerary = data.itinerary;
+      console.log('Successfully converted itinerary:', convertedItinerary);
+      
+      // Save the itinerary to the database
+      const { data: savedItinerary, error: saveError } = await supabase
+        .from('itineraries')
+        .insert([{
+          session_id: currentSessionId,
+          title: convertedItinerary.tripTitle || 'Travel Itinerary',
+          content: convertedItinerary,
+          is_public: false
+        }])
+        .select()
+        .single();
+
+      if (saveError) {
+        console.error('Error saving itinerary:', saveError);
+        return;
+      }
+
+      // Update the session with metadata
+      await supabase
+        .from('chat_sessions')
+        .update({
+          title: convertedItinerary.tripTitle || 'Travel Itinerary',
+          summary: convertedItinerary.summary,
+          number_of_travelers: convertedItinerary.numberOfTravelers
+        })
+        .eq('id', currentSessionId);
+
+      // Update local state
+      setItineraryData(convertedItinerary);
+      
+    } catch (error) {
+      console.error('Error in tryConvertToItinerary:', error);
     }
   };
 
@@ -291,14 +424,140 @@ const ChatPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Living Itinerary Canvas */}
-      <div className="flex-1 overflow-hidden">
-        <LivingItineraryCanvas
-          itineraryData={itineraryData}
-          sessionId={currentSessionId || ''}
-          onSendMessage={sendMessage}
-          isLoading={isLoading}
+      {/* Main Content Area - Two Panel Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Chat History */}
+        <ChatHistoryPanel
+          isCollapsed={isHistoryCollapsed}
+          onToggleCollapse={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+          currentSessionId={currentSessionId}
+          onSessionSelect={handleSessionSelect}
+          onNewSession={createNewSession}
+          userId={user?.id || ''}
         />
+
+        {/* Right Panel - Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Itinerary Canvas or Chat Messages */}
+          <div className="flex-1 overflow-hidden">
+            {itineraryData ? (
+              <LivingItineraryCanvas
+                itineraryData={itineraryData}
+                sessionId={currentSessionId || ''}
+                onSendMessage={async (message: string) => {
+                  // For now, just send as regular chat message
+                  // This can be enhanced later with the living itinerary functionality
+                  await sendMessage(message);
+                  return {
+                    action: 'REQUEST_CLARIFICATION',
+                    target_view: 'schedule',
+                    conversational_text: 'Message sent successfully!'
+                  };
+                }}
+                isLoading={isLoading}
+              />
+            ) : (
+              <div className="flex-1 overflow-y-auto p-6">
+                {messages.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center max-w-md mx-auto">
+                      <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 mx-auto">
+                        <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/20">
+                          <img 
+                            src="/images/nomad.png" 
+                            alt="Nomad's Compass Avatar" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                      <h2 className="font-poppins font-bold text-2xl text-secondary mb-4">
+                        Ready to Plan Your Adventure?
+                      </h2>
+                      <p className="font-lato text-gray-600 mb-6">
+                        Tell me about your dream trip and I'll help you create the perfect itinerary. 
+                        Try something like "Plan a 5-day trip to Tokyo for 2 people" or "I want to visit Paris on a budget".
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6 max-w-4xl mx-auto">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex gap-4 ${
+                          message.sender === 'user' ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        {message.sender === 'ai' && (
+                          <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
+                            <img 
+                              src="/images/nomad.png" 
+                              alt="Nomad's Compass Avatar" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div
+                          className={`max-w-3xl px-4 py-3 rounded-lg font-lato leading-relaxed ${
+                            message.sender === 'user'
+                              ? 'bg-primary text-white'
+                              : 'bg-white border border-gray-200 text-secondary'
+                          }`}
+                        >
+                          <div className="whitespace-pre-wrap">{message.content}</div>
+                          <div className={`text-xs mt-2 ${
+                            message.sender === 'user' ? 'text-white/70' : 'text-gray-500'
+                          }`}>
+                            {new Date(message.created_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                        </div>
+                        {message.sender === 'user' && (
+                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-poppins font-bold text-sm">
+                              {user?.email?.charAt(0).toUpperCase() || 'U'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {isLoading && (
+                      <div className="flex gap-4 justify-start">
+                        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
+                          <img 
+                            src="/images/nomad.png" 
+                            alt="Nomad's Compass Avatar" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="bg-white border border-gray-200 px-4 py-3 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Fixed Chat Input at Bottom */}
+          <ChatInput
+            onSendMessage={sendMessage}
+            isLoading={isLoading}
+            placeholder={itineraryData 
+              ? "What would you like to add or change to your itinerary?" 
+              : "Describe your dream trip and I'll help you plan it..."
+            }
+            disabled={!currentSessionId}
+          />
+        </div>
       </div>
     </div>
   );

@@ -391,38 +391,6 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
       {/* Contextual Bubbles */}
       <ContextualBubbles bubbles={contextualBubbles} />
 
-      {/* Fixed Chat Input */}
-      <div className="bg-white border-t border-gray-200 p-4 shadow-lg">
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto flex gap-3">
-          <textarea
-            ref={textareaRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={isEmpty 
-              ? "Describe your dream trip and I'll start planning..." 
-              : "What would you like to add or change?"
-            }
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary font-lato resize-none min-h-[48px] max-h-[120px] overflow-y-auto"
-            disabled={isLoading || isProcessing}
-            rows={1}
-          />
-          <button
-            type="submit"
-            disabled={!inputValue.trim() || isLoading || isProcessing}
-            className="bg-primary hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-3 rounded-lg transition-colors flex-shrink-0 flex items-center justify-center"
-          >
-            {isProcessing ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-          </button>
-        </form>
-        <p className="text-xs text-gray-500 font-lato mt-2 text-center max-w-4xl mx-auto">
-          Press Enter to send, Shift+Enter for new line
-        </p>
-      </div>
     </div>
   );
 };
