@@ -10,6 +10,11 @@ interface PublicItineraryCardProps {
 const PublicItineraryCard: React.FC<PublicItineraryCardProps> = ({ itinerary, onView }) => {
   const data = itinerary.itinerary_data_json;
 
+  // Return null if data is missing to prevent rendering incomplete card
+  if (!data) {
+    return null;
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer overflow-hidden">
       <div className="p-6">

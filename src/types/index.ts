@@ -18,7 +18,7 @@ export interface Itinerary {
   id: string;
   session_id: string;
   is_public: boolean;
-  itinerary_data_json: ItineraryData;
+  itinerary_data_json: ItineraryData | null;
   created_at: string;
 }
 
