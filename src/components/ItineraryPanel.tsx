@@ -145,7 +145,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
               onClick={onSave}
               disabled={!itineraryData}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-              title="Save Itinerary"
+              title="Save & Share Itinerary"
             >
               <Save className="w-4 h-4 text-secondary" />
             </button>
@@ -153,7 +153,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
               onClick={onShare}
               disabled={!itineraryData}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-              title="Share to Community"
+              title="Save & Share to Community"
             >
               <Share2 className="w-4 h-4 text-secondary" />
             </button>

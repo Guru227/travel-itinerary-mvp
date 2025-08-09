@@ -361,47 +361,31 @@ const ChatPage: React.FC = () => {
     }
   };
 
-  const saveItinerary = async () => {
+  // Updated "Save Itinerary" functionality - Now saves AND shares simultaneously
+  const saveAndShareItinerary = async () => {
     if (!currentSessionId || !itineraryData) return;
 
     try {
+      // Save the itinerary with is_public set to true (Save and Share in one action)
       const { error } = await supabase
         .from('itineraries')
         .upsert([{
           title: itineraryData.title,
           session_id: currentSessionId,
-          is_public: false,
+          is_public: true, // Automatically make public when saving
+          user_id: user?.id, // Associate with logged-in user
           content: itineraryData
         }]);
 
       if (error) throw error;
-      alert('Itinerary saved successfully!');
+      alert('Itinerary saved and shared to community successfully!');
     } catch (error) {
-      console.error('Error saving itinerary:', error);
-      alert('Failed to save itinerary. Please try again.');
+      console.error('Error saving and sharing itinerary:', error);
+      alert('Failed to save and share itinerary. Please try again.');
     }
   };
 
-  const shareItinerary = async () => {
-    if (!currentSessionId || !itineraryData) return;
-
-    try {
-      const { error } = await supabase
-        .from('itineraries')
-        .upsert([{
-          title: itineraryData.title,
-          session_id: currentSessionId,
-          is_public: true,
-          content: itineraryData
-        }]);
-
-      if (error) throw error;
-      alert('Itinerary shared to community successfully!');
-    } catch (error) {
-      console.error('Error sharing itinerary:', error);
-      alert('Failed to share itinerary. Please try again.');
-    }
-  };
+  // Remove separate share function since save now does both
 
   const mailItinerary = async () => {
     if (!itineraryData || !user) return;
@@ -441,7 +425,7 @@ const ChatPage: React.FC = () => {
   return (
     <div className="h-screen bg-surface flex flex-col">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0 mt-16">
         <div className="flex items-center gap-4">
           <Link 
             to="/" 
@@ -505,8 +489,8 @@ const ChatPage: React.FC = () => {
             itineraryData={itineraryData}
             isConverting={isConverting}
             onConvert={convertItinerary}
-            onSave={saveItinerary}
-            onShare={shareItinerary}
+            onSave={saveAndShareItinerary}
+            onShare={saveAndShareItinerary} // Both buttons now do the same action
             onMail={mailItinerary}
           />
         </div>

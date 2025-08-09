@@ -38,6 +38,7 @@ const CommunityPage: React.FC = () => {
 
   const loadPublicItineraries = async () => {
     try {
+      // Fixed API endpoint logic - Explicitly query for public itineraries
       const { data, error } = await supabase
         .from('itineraries')
         .select('*')

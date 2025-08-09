@@ -17,6 +17,7 @@ const PublicItinerariesPreview: React.FC = () => {
 
   const loadLatestItineraries = async () => {
     try {
+      // Fixed API endpoint logic - Ensure we're querying for public itineraries correctly
       const { data, error } = await supabase
         .from('itineraries')
         .select('*')

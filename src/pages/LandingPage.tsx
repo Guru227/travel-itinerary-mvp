@@ -6,7 +6,7 @@ import PublicItinerariesPreview from '../components/PublicItinerariesPreview';
 
 const LandingPage: React.FC = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-16"> {/* Add top padding for fixed navbar */}
       <Hero />
       <Features />
       <AgentShowcase />
