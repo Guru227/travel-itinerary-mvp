@@ -20,13 +20,19 @@ const CommunityPage: React.FC = () => {
   useEffect(() => {
     if (searchTerm) {
       const filtered = itineraries.filter(itinerary =>
-        itinerary.itinerary_data_json.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        itinerary.itinerary_data_json.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        itinerary.itinerary_data_json.summary.toLowerCase().includes(searchTerm.toLowerCase())
+        itinerary.content && 
+        typeof itinerary.content === 'object' &&
+        (
+          (itinerary.content.title && itinerary.content.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (itinerary.content.destination && itinerary.content.destination.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (itinerary.content.summary && itinerary.content.summary.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
       );
       setFilteredItineraries(filtered);
     } else {
-      setFilteredItineraries(itineraries);
+      setFilteredItineraries(itineraries.filter(itinerary => 
+        itinerary.content && typeof itinerary.content === 'object'
+      ));
     }
   }, [searchTerm, itineraries]);
 
