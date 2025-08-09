@@ -20,7 +20,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { message, sessionId, currentItinerary } = await req.json()
+    // FIXED: Added console.log for debugging and receive conversationHistory
+    const requestBody = await req.json()
+    console.log('=== Incoming Request Body ===')
+    console.log('Request keys:', Object.keys(requestBody))
+    console.log('Conversation history length:', requestBody.conversationHistory?.length || 0)
+    console.log('Current message:', requestBody.message)
+    
+    const { message, sessionId, currentItinerary, conversationHistory = [] } = requestBody
 
     // Get Gemini API key from environment variables
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
@@ -244,6 +251,9 @@ User Request: ${message}
 Respond with the structured JSON action:`;
 
     // Call Gemini API
+    console.log('=== Sending to Gemini API ===')
+    console.log('Conversation context length:', conversationText.length)
+    
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {

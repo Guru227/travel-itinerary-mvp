@@ -249,17 +249,18 @@ const ChatPage: React.FC = () => {
       setIsLoading(true);
 
       try {
-        // SIMPLIFIED: Always use living-chat function for structured responses
+        // Send complete conversation history for stateful AI responses
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/living-chat`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
-            message: content, 
-            sessionId: currentSessionId, 
-            currentItinerary: itineraryData 
+          body: JSON.stringify({
+            message: content,
+            sessionId: currentSessionId,
+            currentItinerary: itineraryData,
+            conversationHistory: messages // FIXED: Send complete chat history for stateful conversations
           }),
         });
 
