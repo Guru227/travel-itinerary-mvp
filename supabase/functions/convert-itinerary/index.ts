@@ -232,7 +232,7 @@ async function callGeminiAPI(apiKey: string, prompt: string): Promise<string> {
       temperature: 0.3,
       topK: 40,
       topP: 0.95,
-      maxOutputTokens: 2000,
+      maxOutputTokens: 4000,
     }
   }
 
@@ -381,6 +381,10 @@ function parseWeeklyJSON(response: string, weekNumber: number): WeeklyItineraryD
     if (!jsonString) {
       throw new Error(`No JSON object found in Week ${weekNumber} response`)
     }
+    
+    // Remove comments from JSON string (both single-line and multi-line)
+    jsonString = jsonString.replace(/\/\*[\s\S]*?\*\//g, '') // Remove /* */ comments
+    jsonString = jsonString.replace(/\/\/.*$/gm, '') // Remove // comments
     
     // Clean up common AI generation issues
     jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1')
