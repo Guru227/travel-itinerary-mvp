@@ -24,9 +24,13 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // FIXED: Only load sessions when userId changes, not on every render
   useEffect(() => {
-    loadSessions();
+    if (userId) {
+      loadSessions();
+    }
   }, [userId]);
 
   const loadSessions = async () => {
@@ -46,15 +50,18 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
     }
   };
 
+  // ADDED: Delete session functionality with cascading delete
   const handleDeleteSession = async (sessionId: string) => {
+    setIsDeleting(true);
     try {
-      const { error } = await supabase
-        .from('chat_sessions')
-        .delete()
-        .eq('id', sessionId);
+      // Call the delete_chat_session edge function for cascading delete
+      const { error } = await supabase.functions.invoke('delete-chat-session', {
+        body: { sessionId }
+      });
 
       if (error) throw error;
 
+      // Remove from local state
       setSessions(prev => prev.filter(s => s.id !== sessionId));
       
       // If we deleted the current session, create a new one
@@ -63,8 +70,11 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
       }
     } catch (error) {
       console.error('Error deleting session:', error);
+      alert('Failed to delete travel plan. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setSessionToDelete(null);
     }
-    setSessionToDelete(null);
   };
 
   const formatDate = (dateString: string) => {
@@ -147,9 +157,10 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                     <div
                       key={session.id}
                       className={`group relative rounded-lg transition-colors cursor-pointer ${
+                        // ADDED: Visual highlighting for active session
                         session.id === currentSessionId
-                          ? 'bg-primary/10 border border-primary/20'
-                          : 'hover:bg-gray-50'
+                          ? 'bg-primary/10 border border-primary/20 shadow-sm'
+                          : 'hover:bg-gray-50 border border-transparent'
                       }`}
                       onClick={() => onSessionSelect(session.id)}
                     >
@@ -157,7 +168,12 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                         <div className="flex items-start gap-2">
                           <Calendar className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-lato font-semibold text-sm text-secondary truncate">
+                            <h3 className={`font-lato text-sm truncate ${
+                              // ADDED: Bolder text for active session
+                              session.id === currentSessionId
+                                ? 'font-bold text-primary'
+                                : 'font-semibold text-secondary'
+                            }`}>
                               {session.title || 'Untitled Plan'}
                             </h3>
                             {session.summary && (
@@ -172,14 +188,15 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
                         </div>
                       </div>
                       
-                      {/* Delete button */}
+                      {/* ADDED: Delete button - only visible on hover */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setSessionToDelete(session.id);
                         }}
-                        className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-all"
-                        title="Delete plan"
+                        disabled={isDeleting}
+                        className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded transition-all disabled:opacity-50"
+                        title="Delete travel plan"
                       >
                         <Trash2 className="w-3 h-3 text-red-500" />
                       </button>
@@ -192,12 +209,12 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* ADDED: Delete Confirmation Modal */}
       {sessionToDelete && (
         <ConfirmModal
           isOpen={true}
           title="Delete Travel Plan"
-          message="Are you sure you want to delete this travel plan? This action cannot be undone."
+          message="Are you sure you want to delete this travel plan? This action cannot be undone and will remove all associated messages and itineraries."
           confirmText="Delete"
           cancelText="Cancel"
           variant="danger"

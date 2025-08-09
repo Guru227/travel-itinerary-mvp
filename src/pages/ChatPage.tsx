@@ -30,7 +30,8 @@ const ChatPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user) {
+    // FIXED: Only initialize session when user changes or sessionParam changes
+    if (user && !isLoadingSessions) {
       initializeSession();
     }
   }, [user, sessionParam]);
@@ -173,6 +174,9 @@ const ChatPage: React.FC = () => {
   const createNewSession = async () => {
     if (!user) return;
 
+    // FIXED: Prevent duplicate session creation
+    setIsLoadingSessions(true);
+    
     try {
       // SIMPLIFIED: Always create sessions in building phase
       const { data: newSession, error } = await supabase
@@ -196,6 +200,8 @@ const ChatPage: React.FC = () => {
       await loadMessages(newSession.id);
     } catch (error) {
       console.error('Error creating new session:', error);
+    } finally {
+      setIsLoadingSessions(false);
     }
   };
 
