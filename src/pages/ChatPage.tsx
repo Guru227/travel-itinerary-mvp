@@ -512,11 +512,21 @@ const ChatPage: React.FC = () => {
     try {
       console.log('Attempting to delete session:', sessionId);
       
+      // Ensure we have a valid user before attempting deletion
+      if (!user?.id) {
+        console.error('No user ID available for deletion');
+        alert('Unable to delete session: User not authenticated');
+        return;
+      }
+      
+      console.log('User ID for deletion:', user.id);
+      
       // Delete the chat session (cascade will handle related data)
       const { data, error } = await supabase
         .from('chat_sessions')
         .delete()
-        .eq('id', sessionId);
+        .eq('id', sessionId)
+        .eq('user_id', user.id);
 
       console.log('Delete result:', { data, error });
       
@@ -524,6 +534,9 @@ const ChatPage: React.FC = () => {
         console.error('Database delete error:', error);
         throw error;
       }
+      
+      // Check if any rows were actually deleted
+      console.log('Rows affected by delete:', data);
 
       // Remove from local state
       setSessions(prev => prev.filter(session => session.id !== sessionId));
