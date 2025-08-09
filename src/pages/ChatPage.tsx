@@ -510,14 +510,20 @@ const ChatPage: React.FC = () => {
 
   const deleteSession = async (sessionId: string) => {
     try {
-      // Delete the chat session and related data
-      const { error } = await supabase
+      console.log('Attempting to delete session:', sessionId);
+      
+      // Delete the chat session (cascade will handle related data)
+      const { data, error } = await supabase
         .from('chat_sessions')
         .delete()
-        .eq('id', sessionId)
-        .eq('user_id', user?.id);
+        .eq('id', sessionId);
 
-      if (error) throw error;
+      console.log('Delete result:', { data, error });
+      
+      if (error) {
+        console.error('Database delete error:', error);
+        throw error;
+      }
 
       // Remove from local state
       setSessions(prev => prev.filter(session => session.id !== sessionId));
@@ -537,7 +543,7 @@ const ChatPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error deleting session:', error);
-      alert('Failed to delete chat session. Please try again.');
+      alert(`Failed to delete chat session: ${error.message}. Please try again.`);
     }
   };
 
