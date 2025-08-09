@@ -11,7 +11,7 @@ const MessageComponent: React.FC<MessageProps> = ({ message }) => {
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary/20">
+        <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary/20">
           <img 
             src="/images/nomad.png" 
             alt="Nomad's Compass Avatar" 

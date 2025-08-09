@@ -458,7 +458,7 @@ const ChatPage: React.FC = () => {
             <ArrowLeft className="w-5 h-5 text-secondary" />
           </Link>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20">
+            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/20">
               <img 
                 src="/images/nomad.png" 
                 alt="Nomad's Compass Avatar" 
