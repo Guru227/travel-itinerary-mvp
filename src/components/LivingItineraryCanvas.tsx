@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, CheckSquare, Map } from 'lucide-react';
-import { ItineraryData, ItineraryItem } from '../types';
+import { ItineraryData, ItineraryItem, PreferenceTag } from '../types';
 import ScheduleView from './ScheduleView';
 import ChecklistView from './ChecklistView';
 import MapView from './MapView';
@@ -9,47 +9,31 @@ import PreferenceTags from './PreferenceTags';
 
 interface LivingItineraryCanvasProps {
   itineraryData: ItineraryData | null;
-  lastAiMessage?: string;
-  onSendMessage: (message: string) => void;
+  latestAiMessage?: string;
+  onSendMessage: (message: string) => Promise<void>;
   isLoading: boolean;
 }
 
 const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
   itineraryData,
-  lastAiMessage,
+  latestAiMessage,
   onSendMessage,
   isLoading
 }) => {
-  // Handle null itineraryData
-  if (!itineraryData) {
-    return (
-      <div className="flex flex-col h-full">
-        <ConversationStrip
-          lastAiMessage={lastAiMessage}
-          onSendMessage={onSendMessage}
-          isLoading={isLoading}
-        />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center text-gray-500">
-            <p>Waiting for itinerary data...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const [activeView, setActiveView] = useState<'schedule' | 'checklist' | 'map'>('schedule');
 
-  // Transform itineraryData into ItineraryItem[] format
+  // FIXED: Proper null safety and data transformation
   const transformToItems = (): ItineraryItem[] => {
+    if (!itineraryData) return [];
+    
     const items: ItineraryItem[] = [];
 
     // Transform daily_schedule
-    if (itineraryData.daily_schedule) {
+    if (itineraryData.daily_schedule && Array.isArray(itineraryData.daily_schedule)) {
       itineraryData.daily_schedule.forEach((day, dayIndex) => {
         const dayNumber = day.day || dayIndex + 1;
         
-        if (day.activities) {
+        if (day.activities && Array.isArray(day.activities)) {
           day.activities.forEach((activity, activityIndex) => {
             items.push({
               id: `day-${dayNumber}-activity-${activityIndex}`,
@@ -59,11 +43,12 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
               status: 'confirmed',
               data: {
                 title: activity.title || 'Activity',
-                description: activity.description,
-                location: activity.location,
-                cost: activity.cost,
-                date: day.date
-              }
+                description: activity.description || '',
+                location: activity.location || '',
+                cost: activity.cost || '',
+                date: day.date || ''
+              },
+              created_at: new Date().toISOString()
             });
           });
         }
@@ -71,18 +56,24 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
     }
 
     // Transform checklist items
-    if (itineraryData.checklist) {
-      itineraryData.checklist.forEach((item, index) => {
-        items.push({
-          id: `checklist-${index}`,
-          type: 'checklist',
-          status: item.completed ? 'completed' : 'pending',
-          data: {
-            title: item.task || 'Checklist Item',
-            description: item.description,
-            category: item.category
-          }
-        });
+    if (itineraryData.checklist && Array.isArray(itineraryData.checklist)) {
+      itineraryData.checklist.forEach((category, categoryIndex) => {
+        if (category.items && Array.isArray(category.items)) {
+          category.items.forEach((item, itemIndex) => {
+            items.push({
+              id: `checklist-${categoryIndex}-${itemIndex}`,
+              type: 'checklist_item',
+              status: item.completed ? 'confirmed' : 'suggested',
+              data: {
+                task: typeof item === 'string' ? item : item.task || 'Checklist Item',
+                completed: typeof item === 'object' ? item.completed || false : false,
+                category: category.category || 'General',
+                priority: typeof item === 'object' ? item.priority : undefined
+              },
+              created_at: new Date().toISOString()
+            });
+          });
+        }
       });
     }
 
@@ -91,12 +82,19 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
 
   const items = transformToItems();
   const scheduleItems = items.filter(item => item.type === 'activity');
-  const checklistItems = items.filter(item => item.type === 'checklist');
+  const checklistItems = items.filter(item => item.type === 'checklist_item');
 
   const handleItemClick = (item: ItineraryItem) => {
-    // Handle item click - could open a modal or send a message
     console.log('Item clicked:', item);
   };
+
+  const handleItemToggle = (itemId: string, completed: boolean) => {
+    // Handle checklist item toggle
+    console.log('Item toggled:', itemId, completed);
+  };
+
+  // FIXED: Mock preferences for now
+  const mockPreferences: PreferenceTag[] = [];
 
   const tabs = [
     { id: 'schedule', label: 'Schedule', icon: Calendar, count: scheduleItems.length },
@@ -106,22 +104,24 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Conversation Strip */}
+      {/* FIXED: Only include ConversationStrip, no duplicate input */}
       <ConversationStrip
-        lastAiMessage={lastAiMessage}
+        latestAiMessage={latestAiMessage || ''}
         onSendMessage={onSendMessage}
         isLoading={isLoading}
+        placeholder="Tell me what you'd like to add or change..."
+        disabled={false}
       />
 
-      {/* Preference Tags */}
-      <div className="px-6 py-4 border-b border-gray-200">
+      {/* Preference Tags - Only show if we have preferences */}
+      {mockPreferences.length > 0 && (
         <PreferenceTags
-          preferences={itineraryData.preferences || []}
-          onPreferenceClick={(preference) => {
-            onSendMessage(`Tell me more about ${preference}`);
+          preferences={mockPreferences}
+          onRemovePreference={(preferenceId) => {
+            console.log('Remove preference:', preferenceId);
           }}
         />
-      </div>
+      )}
 
       {/* View Tabs */}
       <div className="border-b border-gray-200">
@@ -155,7 +155,7 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
         </nav>
       </div>
 
-      {/* View Content */}
+      {/* View Content - FIXED: Proper data flow */}
       <div className="flex-1 overflow-auto">
         {activeView === 'schedule' && (
           <ScheduleView
@@ -167,14 +167,14 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
         {activeView === 'checklist' && (
           <ChecklistView
             items={checklistItems}
-            onItemClick={handleItemClick}
+            onItemToggle={handleItemToggle}
           />
         )}
         
         {activeView === 'map' && (
           <MapView
             items={scheduleItems}
-            onItemClick={handleItemClick}
+            itineraryData={itineraryData}
           />
         )}
       </div>

@@ -4,7 +4,7 @@ import { ItineraryItem } from '../types';
 
 interface ChecklistViewProps {
   items: ItineraryItem[];
-  onItemToggle: (itemId: string, completed: boolean) => void;
+  onItemToggle?: (itemId: string, completed: boolean) => void; // FIXED: Make optional
 }
 
 const ChecklistView: React.FC<ChecklistViewProps> = ({ items, onItemToggle }) => {
@@ -56,7 +56,7 @@ const ChecklistView: React.FC<ChecklistViewProps> = ({ items, onItemToggle }) =>
               >
                 <div className="flex items-start gap-3">
                   <button
-                    onClick={() => onItemToggle(item.id, !item.data.completed)}
+                    onClick={() => onItemToggle?.(item.id, !item.data.completed)} // FIXED: Optional chaining
                     className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
                       item.data.completed
                         ? 'bg-primary border-primary text-white'
