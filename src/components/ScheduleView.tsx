@@ -61,7 +61,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({ items, onItemClick }) => {
                 </h2>
                 {dayItems[0]?.data?.date && (
                   <p className="font-lato text-gray-600">
-                    {new Date(dayItems[0].data.date).toLocaleDateString('en-US', {
+                    {new Date(dayItems[0].day ? `2024-01-${dayItems[0].day.toString().padStart(2, '0')}` : Date.now()).toLocaleDateString('en-US', {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric'
