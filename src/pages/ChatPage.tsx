@@ -633,6 +633,7 @@ const ChatPage: React.FC = () => {
           onSessionSelect={setCurrentSessionId}
           onNewSession={createNewSession}
           onRenameSession={renameSession}
+          onDeleteSession={deleteSession}
           isCollapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
