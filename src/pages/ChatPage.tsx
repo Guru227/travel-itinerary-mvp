@@ -445,8 +445,6 @@ const ChatPage: React.FC = () => {
                 itineraryData={itineraryData}
                 sessionId={currentSessionId || ''}
                 onSendMessage={async (message: string) => {
-                  // For now, just send as regular chat message
-                  // This can be enhanced later with the living itinerary functionality
                   await sendMessage(message);
                   return {
                     action: 'REQUEST_CLARIFICATION',
@@ -544,19 +542,15 @@ const ChatPage: React.FC = () => {
                   </div>
                 )}
               </div>
+              {/* Chat Input for non-itinerary view */}
+              <ChatInput
+                onSendMessage={sendMessage}
+                isLoading={isLoading}
+                placeholder="Describe your dream trip and I'll help you plan it..."
+                disabled={!currentSessionId}
+              />
             )}
           </div>
-
-          {/* Fixed Chat Input at Bottom */}
-          <ChatInput
-            onSendMessage={sendMessage}
-            isLoading={isLoading}
-            placeholder={itineraryData 
-              ? "What would you like to add or change to your itinerary?" 
-              : "Describe your dream trip and I'll help you plan it..."
-            }
-            disabled={!currentSessionId}
-          />
         </div>
       </div>
     </div>
