@@ -46,7 +46,16 @@ export class AuthService {
         .eq('email', userEmail)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // Handle case where user doesn't exist in database (stale localStorage)
+        if (error.code === 'PGRST116') {
+          console.log('User not found in database, clearing localStorage');
+          localStorage.removeItem('user_email');
+          localStorage.removeItem('user_id');
+          return null;
+        }
+        throw error;
+      }
       return user;
     } catch (error) {
       console.error('Error fetching current user:', error);

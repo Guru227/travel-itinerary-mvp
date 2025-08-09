@@ -189,7 +189,7 @@ JSON Response:`;
       // Make API call to Supabase Edge Function (which calls Gemini)
       const response = await supabase.functions.invoke('convert-itinerary', {
         body: {
-          itineraryText: conversionPrompt
+          itineraryText: itineraryText
         }
       });
 
