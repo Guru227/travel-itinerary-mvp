@@ -113,13 +113,29 @@ Return ONLY the JSON object, no additional text or formatting.`;
     let itineraryData
     try {
       // Clean the response to extract JSON
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
+      let jsonString = aiResponse.match(/\{[\s\S]*\}/)?.[0]
       if (!jsonMatch) {
         throw new Error('No JSON found in response')
       }
-      itineraryData = JSON.parse(jsonMatch[0])
+      
+      // Clean up common AI generation issues
+      if (jsonString) {
+        // Remove trailing commas before closing brackets/braces
+        jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1')
+        // Remove any markdown code block markers
+        jsonString = jsonString.replace(/```json\s*|\s*```/g, '')
+        // Trim whitespace
+        jsonString = jsonString.trim()
+      }
+      
+      if (!jsonString) {
+        throw new Error('No valid JSON found in response')
+      }
+      
+      itineraryData = JSON.parse(jsonString)
     } catch (parseError) {
       console.error('JSON parsing error:', parseError)
+      console.error('Raw AI response:', aiResponse)
       throw new Error('Failed to parse itinerary data')
     }
 
