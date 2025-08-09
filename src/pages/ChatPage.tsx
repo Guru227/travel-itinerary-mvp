@@ -30,11 +30,10 @@ const ChatPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // FIXED: Only initialize session when user changes or sessionParam changes
-    if (user && !isLoadingSessions) {
+    if (user) {
       initializeSession();
     }
-  }, [user, sessionParam]);
+  }, [user, sessionParam, isLoadingSessions]);
 
   useEffect(() => {
     if (currentSessionId && currentSessionId !== sessionParam) {
@@ -174,17 +173,18 @@ const ChatPage: React.FC = () => {
   const createNewSession = async () => {
     if (!user) return;
 
-    // FIXED: Prevent duplicate session creation
+    if (isLoadingSessions) return; // Prevent duplicate calls
+    
     setIsLoadingSessions(true);
     
     try {
-      // SIMPLIFIED: Always create sessions in building phase
       const { data: newSession, error } = await supabase
         .from('chat_sessions')
         .insert([{
           user_id: user.id,
           title: 'New Travel Plan',
-          phase: 'building'
+          phase: 'building',
+          is_saved: false
         }])
         .select()
         .single();
@@ -200,12 +200,16 @@ const ChatPage: React.FC = () => {
       await loadMessages(newSession.id);
     } catch (error) {
       console.error('Error creating new session:', error);
+      // Don't leave the user in a broken state
+      setIsLoadingSessions(false);
     } finally {
       setIsLoadingSessions(false);
     }
   };
 
   const handleSessionSelect = (sessionId: string) => {
+    if (sessionId === currentSessionId) return; // Don't reload same session
+    
     setCurrentSessionId(sessionId);
     setItineraryData(null);
     setMessages([]);

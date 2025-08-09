@@ -31,13 +31,17 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
     
     const items: ItineraryItem[] = [];
 
-    // Transform daily_schedule
+    // Transform daily_schedule with proper null checks
     if (itineraryData.daily_schedule && Array.isArray(itineraryData.daily_schedule)) {
       itineraryData.daily_schedule.forEach((day, dayIndex) => {
+        if (!day) return; // Skip null/undefined days
+        
         const dayNumber = day.day || dayIndex + 1;
         
         if (day.activities && Array.isArray(day.activities)) {
           day.activities.forEach((activity, activityIndex) => {
+            if (!activity) return; // Skip null/undefined activities
+            
             items.push({
               id: `day-${dayNumber}-activity-${activityIndex}`,
               type: 'activity',
@@ -58,15 +62,19 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
       });
     }
 
-    // Transform checklist items
+    // Transform checklist items with proper null checks
     if (itineraryData.checklist && Array.isArray(itineraryData.checklist)) {
       itineraryData.checklist.forEach((category, categoryIndex) => {
+        if (!category) return; // Skip null/undefined categories
+        
         if (category.items && Array.isArray(category.items)) {
           category.items.forEach((item, itemIndex) => {
+            if (!item) return; // Skip null/undefined items
+            
             items.push({
               id: `checklist-${categoryIndex}-${itemIndex}`,
               type: 'checklist_item',
-              status: item.completed ? 'confirmed' : 'suggested',
+              status: (typeof item === 'object' && item.completed) ? 'confirmed' : 'suggested',
               data: {
                 task: typeof item === 'string' ? item : item.task || 'Checklist Item',
                 completed: typeof item === 'object' ? item.completed || false : false,

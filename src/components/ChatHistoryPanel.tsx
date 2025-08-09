@@ -26,7 +26,6 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // FIXED: Only load sessions when userId changes, not on every render
   useEffect(() => {
     if (userId) {
       loadSessions();
@@ -34,6 +33,8 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   }, [userId]);
 
   const loadSessions = async () => {
+    if (!userId) return;
+    
     try {
       const { data, error } = await supabase
         .from('chat_sessions')
@@ -45,21 +46,30 @@ const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
       setSessions(data || []);
     } catch (error) {
       console.error('Error loading sessions:', error);
+      setSessions([]); // Set empty array on error
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ADDED: Delete session functionality with cascading delete
   const handleDeleteSession = async (sessionId: string) => {
+    if (!sessionId || isDeleting) return;
+    
     setIsDeleting(true);
     try {
-      // Call the delete_chat_session edge function for cascading delete
-      const { error } = await supabase.functions.invoke('delete-chat-session', {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-chat-session`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
         body: { sessionId }
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete session');
+      }
 
       // Remove from local state
       setSessions(prev => prev.filter(s => s.id !== sessionId));
