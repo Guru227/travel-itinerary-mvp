@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import LandingPage from './pages/LandingPage';
 import ChatPage from './pages/ChatPage';
 import CommunityPage from './pages/CommunityPage';
+import SharedItineraryPage from './pages/SharedItineraryPage';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/community" element={<CommunityPage />} />
+          <Route path="/community/itinerary/:sessionId" element={<SharedItineraryPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

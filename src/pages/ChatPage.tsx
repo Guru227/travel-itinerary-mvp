@@ -707,6 +707,7 @@ const ChatPage: React.FC = () => {
             onSave={saveAndShareItinerary}
             onShare={saveAndShareItinerary} // Both buttons now do the same action
             onMail={mailItinerary}
+            currentSessionId={currentSessionId}
           />
         </div>
       </div>

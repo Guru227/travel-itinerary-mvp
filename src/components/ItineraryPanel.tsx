@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, CheckSquare, Map, Download, Share2, Save, Loader, Mail, RefreshCw } from 'lucide-react';
+import { Calendar, CheckSquare, Map, Download, Share2, Save, Loader, Mail, RefreshCw, Link, Copy, Check } from 'lucide-react';
 import { ItineraryData } from '../types';
 
 interface ItineraryPanelProps {
@@ -10,6 +10,7 @@ interface ItineraryPanelProps {
   onSave: () => void;
   onShare: () => void;
   onMail: () => void;
+  currentSessionId: string | null;
 }
 
 const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
@@ -19,15 +20,50 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   onRegenerate,
   onSave,
   onShare,
-  onMail
+  onMail,
+  currentSessionId
 }) => {
   const [activeTab, setActiveTab] = useState<'schedule' | 'checklist' | 'map'>('schedule');
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const tabs = [
     { id: 'schedule', label: 'Daily Schedule', icon: Calendar },
     { id: 'checklist', label: 'Checklist', icon: CheckSquare },
     { id: 'map', label: 'Map View', icon: Map },
   ];
+
+  const generateShareableLink = () => {
+    if (!currentSessionId) return '';
+    return `${window.location.origin}/community/itinerary/${currentSessionId}`;
+  };
+
+  const copyToClipboard = async () => {
+    const link = generateShareableLink();
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = link;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
+
+  const emailItinerary = () => {
+    const link = generateShareableLink();
+    const subject = encodeURIComponent(`Check out this travel itinerary: ${itineraryData?.title || 'Amazing Trip'}`);
+    const body = encodeURIComponent(`I thought you might be interested in this travel itinerary I found:\n\n${itineraryData?.title || 'Travel Itinerary'}\n${itineraryData?.summary || ''}\n\nView the full itinerary here: ${link}`);
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  };
 
   const renderSchedule = () => {
     if (!itineraryData?.daily_schedule) return null;
@@ -249,7 +285,15 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
               <Share2 className="w-4 h-4 text-secondary" />
             </button>
             <button
-              onClick={onMail}
+              onClick={() => setShowShareModal(true)}
+              disabled={!itineraryData}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              title="Get Shareable Link"
+            >
+              <Link className="w-4 h-4 text-secondary" />
+            </button>
+            <button
+              onClick={emailItinerary}
               disabled={!itineraryData}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
               title="Email Itinerary"
@@ -322,6 +366,70 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
           </>
         )}
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && itineraryData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-poppins font-bold text-lg text-secondary">
+                Share Itinerary
+              </h3>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            
+            <p className="font-lato text-gray-600 mb-4">
+              Share this itinerary with friends and family using the link below:
+            </p>
+            
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="text"
+                value={generateShareableLink()}
+                readOnly
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 font-lato text-sm"
+              />
+              <button
+                onClick={copyToClipboard}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-3 py-2 rounded-lg transition-colors font-lato font-semibold"
+              >
+                {copySuccess ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy
+                  </>
+                )}
+              </button>
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={emailItinerary}
+                className="flex-1 flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors font-lato font-semibold"
+              >
+                <Mail className="w-4 h-4" />
+                Email Link
+              </button>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="flex-1 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-colors font-lato font-semibold"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
