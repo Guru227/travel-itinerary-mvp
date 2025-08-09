@@ -1,6 +1,7 @@
 export interface User {
   id: string;
   email: string;
+  nickname?: string | null;
   created_at: string;
 }
 
@@ -21,6 +22,10 @@ export interface Itinerary {
   is_public: boolean;
   content: ItineraryData | null;
   created_at: string;
+  users?: {
+    nickname?: string | null;
+    email: string;
+  };
 }
 
 export interface ItineraryData {

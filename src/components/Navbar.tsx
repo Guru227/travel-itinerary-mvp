@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, User, LogOut, Menu, X } from 'lucide-react';
+import { Compass, User, LogOut, Menu, X, ChevronDown, Settings } from 'lucide-react';
 import { AuthService } from '../lib/auth';
 import { User as UserType } from '../types';
 import AuthModal from './AuthModal';
+import ProfileModal from './ProfileModal';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
   const [user, setUser] = useState<UserType | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -28,7 +31,13 @@ const Navbar: React.FC = () => {
   const handleSignOut = () => {
     AuthService.signOut();
     setUser(null);
+    setShowUserDropdown(false);
     setIsMobileMenuOpen(false);
+  };
+
+  const handleProfileUpdate = (updatedUser: UserType) => {
+    setUser(updatedUser);
+    setShowProfileModal(false);
   };
 
   const isActive = (path: string) => {
@@ -40,12 +49,17 @@ const Navbar: React.FC = () => {
   const navLinks = [
     { path: '/', label: 'Features' },
     { path: '/community', label: 'Community' },
-    { path: '/chat', label: 'Plan' },
+    { path: '/chat', label: 'Planner' }, // Changed from "Plan" to "Planner"
   ];
+
+  const getUserDisplayName = () => {
+    if (!user) return '';
+    return user.nickname || user.email.split('@')[0];
+  };
 
   return (
     <>
-      {/* Global Navigation Bar - Visible on all pages */}
+      {/* Global Navigation Bar - Centered layout with no gaps */}
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -59,8 +73,8 @@ const Navbar: React.FC = () => {
               </span>
             </Link>
 
-            {/* Desktop Navigation Links */}
-            <div className="hidden md:flex items-center space-x-8">
+            {/* Centered Desktop Navigation Links */}
+            <div className="hidden md:flex items-center space-x-8 absolute left-1/2 transform -translate-x-1/2">
               {navLinks.map((link) => (
                 <Link
                   key={link.path}
@@ -76,23 +90,43 @@ const Navbar: React.FC = () => {
               ))}
             </div>
 
-            {/* User Authentication Section */}
-            <div className="hidden md:flex items-center gap-4">
+            {/* Unified User Menu - Right side */}
+            <div className="hidden md:flex items-center">
               {user ? (
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserDropdown(!showUserDropdown)}
+                    className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
                     <User className="w-4 h-4 text-gray-500" />
                     <span className="font-lato text-sm text-gray-700">
-                      {user.email.split('@')[0]}
+                      {getUserDisplayName()}
                     </span>
-                  </div>
-                  <button
-                    onClick={handleSignOut}
-                    className="flex items-center gap-1 px-3 py-1 text-sm font-lato text-gray-600 hover:text-secondary transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
+                    <ChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
+                  
+                  {/* User Dropdown Menu */}
+                  {showUserDropdown && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <button
+                        onClick={() => {
+                          setShowProfileModal(true);
+                          setShowUserDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm font-lato text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Profile
+                      </button>
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full text-left px-4 py-2 text-sm font-lato text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button
@@ -143,9 +177,19 @@ const Navbar: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-gray-500" />
                         <span className="font-lato text-sm text-gray-700">
-                          {user.email}
+                          {getUserDisplayName()}
                         </span>
                       </div>
+                      <button
+                        onClick={() => {
+                          setShowProfileModal(true);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-2 text-sm font-lato text-gray-600 hover:text-secondary transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Profile
+                      </button>
                       <button
                         onClick={handleSignOut}
                         className="flex items-center gap-2 text-sm font-lato text-gray-600 hover:text-secondary transition-colors"
@@ -172,12 +216,30 @@ const Navbar: React.FC = () => {
         </div>
       </nav>
 
+      {/* Close dropdown when clicking outside */}
+      {showUserDropdown && (
+        <div 
+          className="fixed inset-0 z-30" 
+          onClick={() => setShowUserDropdown(false)}
+        />
+      )}
+
       {/* Authentication Modal */}
       {showAuthModal && (
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
           onAuth={handleAuth}
+        />
+      )}
+
+      {/* Profile Modal */}
+      {showProfileModal && user && (
+        <ProfileModal
+          isOpen={showProfileModal}
+          user={user}
+          onClose={() => setShowProfileModal(false)}
+          onUpdate={handleProfileUpdate}
         />
       )}
     </>

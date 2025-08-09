@@ -41,6 +41,7 @@ export type Database = {
           session_id: string;
           content: string;
           sender: string;
+          nickname: string | null;
           created_at: string | null;
         };
         Insert: {
@@ -48,6 +49,7 @@ export type Database = {
           session_id: string;
           content: string;
           sender: string;
+          nickname?: string | null;
           created_at?: string | null;
         };
         Update: {
@@ -55,6 +57,7 @@ export type Database = {
           session_id?: string;
           content?: string;
           sender?: string;
+          nickname?: string | null;
           created_at?: string | null;
         };
       };

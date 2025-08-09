@@ -17,9 +17,16 @@ const PublicItinerariesPreview: React.FC = () => {
 
   const loadLatestItineraries = async () => {
     try {
+      // Updated query to JOIN with users table to get author information
       const { data, error } = await supabase
         .from('itineraries')
-        .select('*')
+        .select(`
+          *,
+          users!inner(
+            nickname,
+            email
+          )
+        `)
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .limit(6);

@@ -18,6 +18,16 @@ const PublicItineraryCard: React.FC<PublicItineraryCardProps> = ({ itinerary, on
 
   console.log('PublicItineraryCard: Rendering itinerary', itinerary.id, data);
 
+  // Get author display name - nickname or email username
+  const getAuthorName = () => {
+    if (itinerary.users?.nickname) {
+      return itinerary.users.nickname;
+    }
+    if (itinerary.users?.email) {
+      return itinerary.users.email.split('@')[0];
+    }
+    return 'Anonymous';
+  };
   return (
     <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer overflow-hidden">
       <div className="p-6">
@@ -50,6 +60,11 @@ const PublicItineraryCard: React.FC<PublicItineraryCardProps> = ({ itinerary, on
             <Users className="w-4 h-4" />
             <span className="font-lato">{data.number_of_travelers} travelers</span>
           </div>
+        </div>
+        
+        {/* Author information */}
+        <div className="mb-4 text-xs text-gray-400 font-lato">
+          Created by {getAuthorName()}
         </div>
         
         <div className="flex items-center justify-between">
