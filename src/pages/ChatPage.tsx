@@ -631,7 +631,7 @@ const ChatPage: React.FC = () => {
       };
 
       // Make API request to n8n webhook
-      const response = await fetch('https://gkasivinayagam.app.n8n.cloud/webhook-test/a0796ab1-ffc9-4abb-8d69-ff1e631045e5', {
+      const response = await fetch('https://gkasivinayagam.app.n8n.cloud/webhook/a0796ab1-ffc9-4abb-8d69-ff1e631045e5', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
