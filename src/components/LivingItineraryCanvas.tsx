@@ -22,6 +22,9 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
 }) => {
   const [activeView, setActiveView] = useState<'schedule' | 'checklist' | 'map'>('schedule');
 
+  // ADDED: Check if we're in the pre-generation state (no itinerary data yet)
+  const isPreGeneration = !itineraryData;
+
   // FIXED: Proper null safety and data transformation
   const transformToItems = (): ItineraryItem[] => {
     if (!itineraryData) return [];
@@ -153,25 +156,45 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
 
       {/* View Content - FIXED: Proper data flow */}
       <div className="flex-1 overflow-auto">
-        {activeView === 'schedule' && (
-          <ScheduleView
-            items={scheduleItems}
-            onItemClick={handleItemClick}
-          />
-        )}
-        
-        {activeView === 'checklist' && (
-          <ChecklistView
-            items={checklistItems}
-            onItemToggle={handleItemToggle}
-          />
-        )}
-        
-        {activeView === 'map' && (
-          <MapView
-            items={scheduleItems}
-            itineraryData={itineraryData}
-          />
+        {/* ADDED: Conditional rendering - show placeholder during pre-generation phase */}
+        {isPreGeneration ? (
+          <div className="flex items-center justify-center h-full min-h-[400px]">
+            <div className="text-center max-w-md mx-auto px-6">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-6 mx-auto">
+                <Calendar className="w-8 h-8 text-primary" />
+              </div>
+              <h3 className="font-poppins font-bold text-xl text-secondary mb-3">
+                Getting Ready to Plan
+              </h3>
+              <p className="font-lato text-gray-600 leading-relaxed">
+                Your itinerary will be generated here once the initial details are gathered.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* EXISTING: Render actual itinerary views when data is available */}
+            {activeView === 'schedule' && (
+              <ScheduleView
+                items={scheduleItems}
+                onItemClick={handleItemClick}
+              />
+            )}
+            
+            {activeView === 'checklist' && (
+              <ChecklistView
+                items={checklistItems}
+                onItemToggle={handleItemToggle}
+              />
+            )}
+            
+            {activeView === 'map' && (
+              <MapView
+                items={scheduleItems}
+                itineraryData={itineraryData}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
