@@ -408,11 +408,11 @@ const ChatPage: React.FC = () => {
     // Clear any previous processing errors
     clearProcessingError();
 
-    // Process the itinerary again with fresh AI analysis
+    // Process the itinerary again using the same processor as convert
     const result = await processItinerary(latestItinerary);
     
     if (result) {
-      // Convert the structured data to the format expected by ItineraryPanel
+      // Convert the structured data to the format expected by ItineraryPanel (same as convertItinerary)
       const convertedData: ItineraryData = {
         title: result.tripTitle,
         summary: result.summary,
@@ -460,6 +460,20 @@ const ChatPage: React.FC = () => {
       };
 
       setItineraryData(convertedData);
+      
+      // Save the regenerated itinerary to the database
+      try {
+        await supabase
+          .from('itineraries')
+          .upsert([{
+            title: convertedData.title,
+            session_id: currentSessionId,
+            is_public: false,
+            content: convertedData
+          }]);
+      } catch (error) {
+        console.error('Error saving regenerated itinerary:', error);
+      }
     } else if (processingError) {
       alert(`Failed to regenerate schedule: ${processingError}`);
     }
