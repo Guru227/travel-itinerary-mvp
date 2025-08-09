@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Edit3, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit3, Check, X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { ChatSession } from '../types';
 
 interface ChatSidebarProps {
@@ -8,6 +8,7 @@ interface ChatSidebarProps {
   onSessionSelect: (sessionId: string) => void;
   onNewSession: () => void;
   onRenameSession: (sessionId: string, newTitle: string) => void;
+  onDeleteSession: (sessionId: string) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }
@@ -18,6 +19,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onSessionSelect,
   onNewSession,
   onRenameSession,
+  onDeleteSession,
   isCollapsed,
   onToggleCollapse
 }) => {
@@ -149,15 +151,30 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         {new Date(session.created_at).toLocaleDateString()}
                       </p>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEditing(session);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
-                    >
-                      <Edit3 className="w-3 h-3 text-gray-500" />
-                    </button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditing(session);
+                        }}
+                        className="p-1 hover:bg-gray-200 rounded"
+                        title="Rename chat"
+                      >
+                        <Edit3 className="w-3 h-3 text-gray-500" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+                            onDeleteSession(session.id);
+                          }
+                        }}
+                        className="p-1 hover:bg-red-100 rounded"
+                        title="Delete chat"
+                      >
+                        <Trash2 className="w-3 h-3 text-red-500" />
+                      </button>
+                    </div>
                   </>
                 )}
               </div>

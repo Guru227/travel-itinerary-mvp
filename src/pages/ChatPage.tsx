@@ -337,17 +337,40 @@ const ChatPage: React.FC = () => {
         destination: result.destination,
         duration: result.duration,
         number_of_travelers: result.numberOfTravelers,
-        daily_schedule: result.schedule.map(item => ({
-          day: item.day,
-          date: item.date,
-          activities: [{
-            time: item.time,
-            title: item.activity,
-            description: item.description,
-            location: item.location,
-            cost: item.estimatedCost
-          }]
-        })),
+        daily_schedule: result.schedule.map(item => {
+          // Combine all time periods into a single activities array for backward compatibility
+          const allActivities = [
+            ...item.morning.map(activity => ({ ...activity, period: 'Morning' })),
+            ...item.afternoon.map(activity => ({ ...activity, period: 'Afternoon' })),
+            ...item.evening.map(activity => ({ ...activity, period: 'Evening' }))
+          ];
+
+          return {
+            day: item.day,
+            date: item.date,
+            morning: item.morning.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            })),
+            afternoon: item.afternoon.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            })),
+            evening: item.evening.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            }))
+          };
+        }),
         checklist: result.checklist.map(category => ({
           category: category.category,
           items: category.items.map(item => item.task)
@@ -367,6 +390,105 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  const regenerateSchedule = async () => {
+    if (!currentSessionId || messages.length === 0) {
+      alert('No conversation available to regenerate');
+      return;
+    }
+
+    // Get the latest AI message that contains itinerary information
+    const aiMessages = messages.filter(m => m.sender === 'ai');
+    const latestItinerary = aiMessages[aiMessages.length - 1]?.content || '';
+
+    if (!latestItinerary.trim()) {
+      alert('No itinerary content found to regenerate');
+      return;
+    }
+
+    // Clear existing itinerary data before regenerating
+    setItineraryData(null);
+
+    // Clear any previous processing errors
+    clearProcessingError();
+
+    // Process the itinerary again using the same processor as convert
+    const result = await processItinerary(latestItinerary);
+    
+    if (result) {
+      // Convert the structured data to the format expected by ItineraryPanel (same as convertItinerary)
+      const convertedData: ItineraryData = {
+        title: result.tripTitle,
+        summary: result.summary,
+        destination: result.destination,
+        duration: result.duration,
+        number_of_travelers: result.numberOfTravelers,
+        daily_schedule: result.schedule.map(item => {
+          return {
+            day: item.day,
+            date: item.date,
+            morning: item.morning.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            })),
+            afternoon: item.afternoon.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            })),
+            evening: item.evening.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            }))
+          };
+        }),
+        checklist: result.checklist.map(category => ({
+          category: category.category,
+          items: category.items.map(item => item.task)
+        })),
+        map_locations: result.mapPins.map(pin => ({
+          name: pin.name,
+          address: pin.address,
+          lat: pin.lat,
+          lng: pin.lng,
+          type: pin.type as 'accommodation' | 'restaurant' | 'attraction' | 'transport'
+        }))
+      };
+
+      setItineraryData(convertedData);
+      
+      // Save the regenerated itinerary to the database
+      try {
+        // Delete existing itinerary for this session first
+        await supabase
+          .from('itineraries')
+          .delete()
+          .eq('session_id', currentSessionId);
+
+        // Insert the new regenerated itinerary
+        await supabase
+          .from('itineraries')
+          .insert([{
+            title: convertedData.title,
+            session_id: currentSessionId,
+            is_public: false,
+            content: convertedData
+          }]);
+      } catch (error) {
+        console.error('Error saving regenerated itinerary:', error);
+      }
+    } else if (processingError) {
+      alert(`Failed to regenerate schedule: ${processingError}`);
+    }
+  };
+
   const renameSession = async (sessionId: string, newTitle: string) => {
     try {
       const { error } = await supabase
@@ -383,6 +505,85 @@ const ChatPage: React.FC = () => {
       ));
     } catch (error) {
       console.error('Error renaming session:', error);
+    }
+  };
+
+  const deleteSession = async (sessionId: string) => {
+    try {
+      console.log('Attempting to delete session:', sessionId);
+      
+      // Ensure we have a valid user before attempting deletion
+      if (!user?.id) {
+        console.error('No user ID available for deletion');
+        alert('Unable to delete session: User not authenticated');
+        return;
+      }
+      
+      console.log('User ID for deletion:', user.id);
+      
+      // First, try to delete related messages manually
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('session_id', sessionId);
+
+      if (messagesError) {
+        console.error('Error deleting messages:', messagesError);
+      }
+
+      // Then delete related itineraries
+      const { error: itinerariesError } = await supabase
+        .from('itineraries')
+        .delete()
+        .eq('session_id', sessionId);
+
+      if (itinerariesError) {
+        console.error('Error deleting itineraries:', itinerariesError);
+      }
+
+      // Finally, delete the chat session
+      const { data, error, count } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId)
+        .eq('user_id', user.id)
+        .select();
+
+      console.log('Delete result:', { data, error, count });
+      
+      if (error) {
+        console.error('Database delete error:', error);
+        throw error;
+      }
+      
+      // Check if any rows were actually deleted
+      if (!data || data.length === 0) {
+        console.error('No rows were deleted - session may not exist or user lacks permission');
+        alert('Failed to delete chat session: Session not found or access denied');
+        return;
+      }
+      
+      console.log('Successfully deleted session:', data);
+
+      // Remove from local state
+      setSessions(prev => prev.filter(session => session.id !== sessionId));
+
+      // If we deleted the current session, switch to another one or create new
+      if (sessionId === currentSessionId) {
+        const remainingSessions = sessions.filter(session => session.id !== sessionId);
+        if (remainingSessions.length > 0) {
+          setCurrentSessionId(remainingSessions[0].id);
+        } else {
+          // No sessions left, create a new one
+          setCurrentSessionId(null);
+          setMessages([]);
+          setItineraryData(null);
+          await createNewSession();
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      alert(`Failed to delete chat session: ${error.message}. Please try again.`);
     }
   };
 
@@ -482,6 +683,7 @@ const ChatPage: React.FC = () => {
           onSessionSelect={setCurrentSessionId}
           onNewSession={createNewSession}
           onRenameSession={renameSession}
+          onDeleteSession={deleteSession}
           isCollapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
@@ -501,6 +703,7 @@ const ChatPage: React.FC = () => {
             itineraryData={itineraryData}
             isConverting={isConverting}
             onConvert={convertItinerary}
+            onRegenerate={regenerateSchedule}
             onSave={saveAndShareItinerary}
             onShare={saveAndShareItinerary} // Both buttons now do the same action
             onMail={mailItinerary}

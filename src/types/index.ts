@@ -46,7 +46,9 @@ export interface ItineraryData {
 export interface DaySchedule {
   day: number;
   date: string;
-  activities: Activity[];
+  morning: Activity[];
+  afternoon: Activity[];
+  evening: Activity[];
 }
 
 export interface Activity {

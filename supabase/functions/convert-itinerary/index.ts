@@ -232,7 +232,7 @@ async function callGeminiAPI(apiKey: string, prompt: string): Promise<string> {
       temperature: 0.3,
       topK: 40,
       topP: 0.95,
-      maxOutputTokens: 2000,
+      maxOutputTokens: 4000,
     }
   }
 
@@ -304,12 +304,36 @@ Required JSON Structure:
     {
       "day": 1,
       "date": "2024-03-15",
-      "time": "09:00",
-      "activity": "Activity name",
-      "description": "Detailed activity description",
-      "location": "Specific location name",
-      "coordinates": { "lat": 35.6762, "lng": 139.6503 },
-      "estimatedCost": "$50 per person"
+      "morning": [
+        {
+          "time": "09:00",
+          "activity": "Morning activity name",
+          "description": "Detailed morning activity description",
+          "location": "Specific location name",
+          "coordinates": { "lat": 35.6762, "lng": 139.6503 },
+          "estimatedCost": "$30 per person"
+        }
+      ],
+      "afternoon": [
+        {
+          "time": "14:00",
+          "activity": "Afternoon activity name",
+          "description": "Detailed afternoon activity description",
+          "location": "Specific location name",
+          "coordinates": { "lat": 35.6762, "lng": 139.6503 },
+          "estimatedCost": "$40 per person"
+        }
+      ],
+      "evening": [
+        {
+          "time": "19:00",
+          "activity": "Evening activity name",
+          "description": "Detailed evening activity description",
+          "location": "Specific location name",
+          "coordinates": { "lat": 35.6762, "lng": 139.6503 },
+          "estimatedCost": "$60 per person"
+        }
+      ]
     }
   ],
   "checklist": [
@@ -357,6 +381,10 @@ function parseWeeklyJSON(response: string, weekNumber: number): WeeklyItineraryD
     if (!jsonString) {
       throw new Error(`No JSON object found in Week ${weekNumber} response`)
     }
+    
+    // Remove comments from JSON string (both single-line and multi-line)
+    jsonString = jsonString.replace(/\/\*[\s\S]*?\*\//g, '') // Remove /* */ comments
+    jsonString = jsonString.replace(/\/\/.*$/gm, '') // Remove // comments
     
     // Clean up common AI generation issues
     jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1')
