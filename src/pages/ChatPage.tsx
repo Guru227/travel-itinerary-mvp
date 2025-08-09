@@ -77,13 +77,20 @@ const ChatPage: React.FC = () => {
   const loadExistingSession = async (sessionId: string) => {
     try {
       // Load session data
-      const { data: sessionData, error: sessionError } = await supabase
+      const { data: sessionDataArray, error: sessionError } = await supabase
         .from('chat_sessions')
         .select('*')
         .eq('id', sessionId)
-        .single();
+        .limit(1);
 
       if (sessionError) throw sessionError;
+      
+      // Check if session exists
+      if (!sessionDataArray || sessionDataArray.length === 0) {
+        throw new Error('Session not found or invalid');
+      }
+      
+      const sessionData = sessionDataArray[0];
 
       // Load existing itinerary
       const { data: itinerariesData, error: itineraryError } = await supabase
