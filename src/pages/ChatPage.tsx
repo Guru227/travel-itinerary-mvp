@@ -508,6 +508,35 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  const deleteSession = async (sessionId: string) => {
+    try {
+      // Delete the chat session (messages and itineraries will be cascade deleted)
+      const { error } = await supabase
+        .from('chat_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setSessions(prev => prev.filter(session => session.id !== sessionId));
+
+      // If we deleted the current session, switch to another one or create new
+      if (sessionId === currentSessionId) {
+        const remainingSessions = sessions.filter(session => session.id !== sessionId);
+        if (remainingSessions.length > 0) {
+          setCurrentSessionId(remainingSessions[0].id);
+        } else {
+          // No sessions left, create a new one
+          await createNewSession();
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      alert('Failed to delete chat session. Please try again.');
+    }
+  };
+
   // Updated "Save Itinerary" functionality - Now saves AND shares simultaneously
   const saveAndShareItinerary = async () => {
     if (!currentSessionId || !itineraryData) return;
