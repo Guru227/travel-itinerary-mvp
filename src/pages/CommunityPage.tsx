@@ -49,14 +49,14 @@ const CommunityPage: React.FC = () => {
         .from('itineraries')
         .select(`
           *,
+          users!inner (
+            nickname,
+            email
+          ),
           chat_sessions!inner (
             title,
             summary,
-            number_of_travelers,
-            users!inner (
-              nickname,
-              email
-            )
+            number_of_travelers
           )
         `)
         .eq('is_public', true)
