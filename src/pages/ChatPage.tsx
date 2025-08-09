@@ -405,6 +405,9 @@ const ChatPage: React.FC = () => {
       return;
     }
 
+    // Clear existing itinerary data before regenerating
+    setItineraryData(null);
+
     // Clear any previous processing errors
     clearProcessingError();
 
@@ -463,9 +466,16 @@ const ChatPage: React.FC = () => {
       
       // Save the regenerated itinerary to the database
       try {
+        // Delete existing itinerary for this session first
         await supabase
           .from('itineraries')
-          .upsert([{
+          .delete()
+          .eq('session_id', currentSessionId);
+
+        // Insert the new regenerated itinerary
+        await supabase
+          .from('itineraries')
+          .insert([{
             title: convertedData.title,
             session_id: currentSessionId,
             is_public: false,
