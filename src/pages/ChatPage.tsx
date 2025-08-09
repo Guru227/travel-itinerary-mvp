@@ -337,17 +337,40 @@ const ChatPage: React.FC = () => {
         destination: result.destination,
         duration: result.duration,
         number_of_travelers: result.numberOfTravelers,
-        daily_schedule: result.schedule.map(item => ({
-          day: item.day,
-          date: item.date,
-          activities: [{
-            time: item.time,
-            title: item.activity,
-            description: item.description,
-            location: item.location,
-            cost: item.estimatedCost
-          }]
-        })),
+        daily_schedule: result.schedule.map(item => {
+          // Combine all time periods into a single activities array for backward compatibility
+          const allActivities = [
+            ...item.morning.map(activity => ({ ...activity, period: 'Morning' })),
+            ...item.afternoon.map(activity => ({ ...activity, period: 'Afternoon' })),
+            ...item.evening.map(activity => ({ ...activity, period: 'Evening' }))
+          ];
+
+          return {
+            day: item.day,
+            date: item.date,
+            morning: item.morning.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            })),
+            afternoon: item.afternoon.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            })),
+            evening: item.evening.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            }))
+          };
+        }),
         checklist: result.checklist.map(category => ({
           category: category.category,
           items: category.items.map(item => item.task)

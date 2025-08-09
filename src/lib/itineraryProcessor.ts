@@ -22,6 +22,12 @@ export interface StructuredItinerary {
 export interface ScheduleItem {
   day: number;
   date: string;
+  morning: ScheduleActivity[];
+  afternoon: ScheduleActivity[];
+  evening: ScheduleActivity[];
+}
+
+export interface ScheduleActivity {
   time: string;
   activity: string;
   description: string;
@@ -270,19 +276,30 @@ function validateAndStructureData(rawData: any): StructuredItinerary {
     }
 
     // Structure and validate schedule data
-    const schedule: ScheduleItem[] = (rawData.schedule || []).map((item: any, index: number) => ({
-      day: item.day || index + 1,
-      date: item.date || new Date().toISOString().split('T')[0],
-      time: item.time || '09:00',
-      activity: item.activity || 'Activity',
-      description: item.description || item.activity || 'No description available',
-      location: item.location,
-      coordinates: item.coordinates ? {
-        lat: parseFloat(item.coordinates.lat),
-        lng: parseFloat(item.coordinates.lng)
-      } : undefined,
-      estimatedCost: item.estimatedCost
-    }));
+    const schedule: ScheduleItem[] = (rawData.schedule || []).map((item: any, index: number) => {
+      // Helper function to process activities for each time period
+      const processActivities = (activities: any[] = []): ScheduleActivity[] => {
+        return activities.map((activity: any) => ({
+          time: activity.time || '09:00',
+          activity: activity.activity || activity.title || 'Activity',
+          description: activity.description || activity.activity || 'No description available',
+          location: activity.location,
+          coordinates: activity.coordinates ? {
+            lat: parseFloat(activity.coordinates.lat),
+            lng: parseFloat(activity.coordinates.lng)
+          } : undefined,
+          estimatedCost: activity.estimatedCost || activity.cost
+        }));
+      };
+
+      return {
+        day: item.day || index + 1,
+        date: item.date || new Date().toISOString().split('T')[0],
+        morning: processActivities(item.morning),
+        afternoon: processActivities(item.afternoon),
+        evening: processActivities(item.evening)
+      };
+    });
 
     // Structure and validate checklist data
     const checklist: ChecklistCategory[] = (rawData.checklist || []).map((category: any) => ({
