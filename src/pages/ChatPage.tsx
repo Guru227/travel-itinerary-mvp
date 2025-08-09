@@ -458,8 +458,12 @@ const ChatPage: React.FC = () => {
             <ArrowLeft className="w-5 h-5 text-secondary" />
           </Link>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-white font-poppins font-bold text-sm">N</span>
+            <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-primary/20">
+              <img 
+                src="/images/nomad.png" 
+                alt="Nomad's Compass Avatar" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <h1 className="font-poppins font-bold text-secondary">Nomad's Compass</h1>
