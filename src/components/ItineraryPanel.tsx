@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Calendar, CheckSquare, Map, Download, Share2, Save, Loader, Mail } from 'lucide-react';
+import { Calendar, CheckSquare, Map, Download, Share2, Save, Loader, Mail, RefreshCw } from 'lucide-react';
 import { ItineraryData } from '../types';
 
 interface ItineraryPanelProps {
   itineraryData: ItineraryData | null;
   isConverting: boolean;
   onConvert: () => void;
+  onRegenerate: () => void;
   onSave: () => void;
   onShare: () => void;
   onMail: () => void;
@@ -15,6 +16,7 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   itineraryData,
   isConverting,
   onConvert,
+  onRegenerate,
   onSave,
   onShare,
   onMail
@@ -222,6 +224,14 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
             {itineraryData ? itineraryData.title : 'Itinerary View'}
           </h2>
           <div className="flex items-center gap-2">
+            <button
+              onClick={onRegenerate}
+              disabled={!itineraryData || isConverting}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              title="Regenerate Schedule"
+            >
+              <RefreshCw className="w-4 h-4 text-secondary" />
+            </button>
             <button
               onClick={onSave}
               disabled={!itineraryData}

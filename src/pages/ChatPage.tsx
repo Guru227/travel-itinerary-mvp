@@ -390,6 +390,81 @@ const ChatPage: React.FC = () => {
     }
   };
 
+  const regenerateSchedule = async () => {
+    if (!currentSessionId || messages.length === 0) {
+      alert('No conversation available to regenerate');
+      return;
+    }
+
+    // Get the latest AI message that contains itinerary information
+    const aiMessages = messages.filter(m => m.sender === 'ai');
+    const latestItinerary = aiMessages[aiMessages.length - 1]?.content || '';
+
+    if (!latestItinerary.trim()) {
+      alert('No itinerary content found to regenerate');
+      return;
+    }
+
+    // Clear any previous processing errors
+    clearProcessingError();
+
+    // Process the itinerary again with fresh AI analysis
+    const result = await processItinerary(latestItinerary);
+    
+    if (result) {
+      // Convert the structured data to the format expected by ItineraryPanel
+      const convertedData: ItineraryData = {
+        title: result.tripTitle,
+        summary: result.summary,
+        destination: result.destination,
+        duration: result.duration,
+        number_of_travelers: result.numberOfTravelers,
+        daily_schedule: result.schedule.map(item => {
+          return {
+            day: item.day,
+            date: item.date,
+            morning: item.morning.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            })),
+            afternoon: item.afternoon.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            })),
+            evening: item.evening.map(activity => ({
+              time: activity.time,
+              title: activity.activity,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.estimatedCost
+            }))
+          };
+        }),
+        checklist: result.checklist.map(category => ({
+          category: category.category,
+          items: category.items.map(item => item.task)
+        })),
+        map_locations: result.mapPins.map(pin => ({
+          name: pin.name,
+          address: pin.address,
+          lat: pin.lat,
+          lng: pin.lng,
+          type: pin.type as 'accommodation' | 'restaurant' | 'attraction' | 'transport'
+        }))
+      };
+
+      setItineraryData(convertedData);
+    } else if (processingError) {
+      alert(`Failed to regenerate schedule: ${processingError}`);
+    }
+  };
+
   const renameSession = async (sessionId: string, newTitle: string) => {
     try {
       const { error } = await supabase
@@ -524,6 +599,7 @@ const ChatPage: React.FC = () => {
             itineraryData={itineraryData}
             isConverting={isConverting}
             onConvert={convertItinerary}
+            onRegenerate={regenerateSchedule}
             onSave={saveAndShareItinerary}
             onShare={saveAndShareItinerary} // Both buttons now do the same action
             onMail={mailItinerary}
