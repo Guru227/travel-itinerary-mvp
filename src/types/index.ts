@@ -59,7 +59,11 @@ export interface Activity {
 
 export interface ChecklistItem {
   category: string;
-  items: string[];
+  items: {
+    task: string;
+    completed: boolean;
+    priority?: 'low' | 'medium' | 'high';
+  }[];
 }
 
 export interface MapLocation {

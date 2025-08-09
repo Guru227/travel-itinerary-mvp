@@ -55,15 +55,16 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
 
       // Convert checklist items
       itineraryData.checklist?.forEach((category, catIndex) => {
-        category.items.forEach((item, itemIndex) => {
+        category.items.forEach((checklistItem, itemIndex) => {
           items.push({
             id: `checklist_${catIndex}_${itemIndex}`,
             type: 'checklist_item',
             status: 'confirmed',
             data: {
-              task: item,
+              task: checklistItem.task,
               category: category.category,
-              completed: false
+              completed: checklistItem.completed,
+              priority: checklistItem.priority
             },
             created_at: new Date().toISOString()
           });
