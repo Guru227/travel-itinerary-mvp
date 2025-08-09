@@ -34,36 +34,117 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
       <div className="space-y-6">
         {itineraryData.daily_schedule.map((day) => (
           <div key={day.day} className="bg-white rounded-lg p-4 shadow-sm border">
-            <h3 className="font-poppins font-bold text-lg text-secondary mb-2">
+            <h3 className="font-poppins font-bold text-lg text-secondary mb-4">
               Day {day.day} - {day.date}
             </h3>
-            <div className="space-y-3">
-              {day.activities.map((activity, index) => (
-                <div key={index} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="text-primary font-lato font-semibold text-sm min-w-[60px]">
-                    {activity.time}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-lato font-semibold text-secondary">
-                      {activity.title}
-                    </h4>
-                    <p className="text-gray-600 font-lato text-sm mt-1">
-                      {activity.description}
-                    </p>
-                    {activity.location && (
-                      <p className="text-gray-500 font-lato text-xs mt-1">
-                        📍 {activity.location}
-                      </p>
-                    )}
-                    {activity.cost && (
-                      <p className="text-primary font-lato text-xs mt-1">
-                        💰 {activity.cost}
-                      </p>
-                    )}
-                  </div>
+            
+            {/* Morning Activities */}
+            {day.morning && day.morning.length > 0 && (
+              <div className="mb-4">
+                <h4 className="font-poppins font-semibold text-md text-secondary mb-2 flex items-center gap-2">
+                  🌅 Morning
+                </h4>
+                <div className="space-y-2 ml-4">
+                  {day.morning.map((activity, index) => (
+                    <div key={index} className="flex gap-3 p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                      <div className="text-yellow-600 font-lato font-semibold text-sm min-w-[60px]">
+                        {activity.time}
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-lato font-semibold text-secondary">
+                          {activity.title}
+                        </h5>
+                        <p className="text-gray-600 font-lato text-sm mt-1">
+                          {activity.description}
+                        </p>
+                        {activity.location && (
+                          <p className="text-gray-500 font-lato text-xs mt-1">
+                            📍 {activity.location}
+                          </p>
+                        )}
+                        {activity.cost && (
+                          <p className="text-yellow-600 font-lato text-xs mt-1">
+                            💰 {activity.cost}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {/* Afternoon Activities */}
+            {day.afternoon && day.afternoon.length > 0 && (
+              <div className="mb-4">
+                <h4 className="font-poppins font-semibold text-md text-secondary mb-2 flex items-center gap-2">
+                  ☀️ Afternoon
+                </h4>
+                <div className="space-y-2 ml-4">
+                  {day.afternoon.map((activity, index) => (
+                    <div key={index} className="flex gap-3 p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
+                      <div className="text-orange-600 font-lato font-semibold text-sm min-w-[60px]">
+                        {activity.time}
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-lato font-semibold text-secondary">
+                          {activity.title}
+                        </h5>
+                        <p className="text-gray-600 font-lato text-sm mt-1">
+                          {activity.description}
+                        </p>
+                        {activity.location && (
+                          <p className="text-gray-500 font-lato text-xs mt-1">
+                            📍 {activity.location}
+                          </p>
+                        )}
+                        {activity.cost && (
+                          <p className="text-orange-600 font-lato text-xs mt-1">
+                            💰 {activity.cost}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Evening Activities */}
+            {day.evening && day.evening.length > 0 && (
+              <div className="mb-4">
+                <h4 className="font-poppins font-semibold text-md text-secondary mb-2 flex items-center gap-2">
+                  🌙 Evening
+                </h4>
+                <div className="space-y-2 ml-4">
+                  {day.evening.map((activity, index) => (
+                    <div key={index} className="flex gap-3 p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-400">
+                      <div className="text-indigo-600 font-lato font-semibold text-sm min-w-[60px]">
+                        {activity.time}
+                      </div>
+                      <div className="flex-1">
+                        <h5 className="font-lato font-semibold text-secondary">
+                          {activity.title}
+                        </h5>
+                        <p className="text-gray-600 font-lato text-sm mt-1">
+                          {activity.description}
+                        </p>
+                        {activity.location && (
+                          <p className="text-gray-500 font-lato text-xs mt-1">
+                            📍 {activity.location}
+                          </p>
+                        )}
+                        {activity.cost && (
+                          <p className="text-indigo-600 font-lato text-xs mt-1">
+                            💰 {activity.cost}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
