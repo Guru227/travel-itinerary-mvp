@@ -72,19 +72,66 @@ const ItineraryPreviewModal: React.FC<ItineraryPreviewModalProps> = ({ itinerary
           <h4 className="font-poppins font-bold text-secondary mb-2">
             Day {day.day} - {day.date}
           </h4>
-          <div className="space-y-2">
-            {day.activities.map((activity, index) => (
-              <div key={index} className="flex gap-3">
-                <span className="text-primary font-lato font-semibold text-sm min-w-[60px]">
-                  {activity.time}
-                </span>
-                <div>
-                  <p className="font-lato font-semibold text-secondary">{activity.title}</p>
-                  <p className="font-lato text-sm text-gray-600">{activity.description}</p>
-                </div>
+          
+          {/* Morning Activities */}
+          {day.morning && day.morning.length > 0 && (
+            <div className="mb-3">
+              <h5 className="font-lato font-semibold text-sm text-gray-700 mb-1">🌅 Morning</h5>
+              <div className="space-y-1 ml-4">
+                {day.morning.map((activity, index) => (
+                  <div key={index} className="flex gap-3">
+                    <span className="text-yellow-600 font-lato font-semibold text-sm min-w-[60px]">
+                      {activity.time}
+                    </span>
+                    <div>
+                      <p className="font-lato font-semibold text-secondary">{activity.title}</p>
+                      <p className="font-lato text-sm text-gray-600">{activity.description}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* Afternoon Activities */}
+          {day.afternoon && day.afternoon.length > 0 && (
+            <div className="mb-3">
+              <h5 className="font-lato font-semibold text-sm text-gray-700 mb-1">☀️ Afternoon</h5>
+              <div className="space-y-1 ml-4">
+                {day.afternoon.map((activity, index) => (
+                  <div key={index} className="flex gap-3">
+                    <span className="text-orange-600 font-lato font-semibold text-sm min-w-[60px]">
+                      {activity.time}
+                    </span>
+                    <div>
+                      <p className="font-lato font-semibold text-secondary">{activity.title}</p>
+                      <p className="font-lato text-sm text-gray-600">{activity.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Evening Activities */}
+          {day.evening && day.evening.length > 0 && (
+            <div className="mb-3">
+              <h5 className="font-lato font-semibold text-sm text-gray-700 mb-1">🌙 Evening</h5>
+              <div className="space-y-1 ml-4">
+                {day.evening.map((activity, index) => (
+                  <div key={index} className="flex gap-3">
+                    <span className="text-indigo-600 font-lato font-semibold text-sm min-w-[60px]">
+                      {activity.time}
+                    </span>
+                    <div>
+                      <p className="font-lato font-semibold text-secondary">{activity.title}</p>
+                      <p className="font-lato text-sm text-gray-600">{activity.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ))}
     </div>
