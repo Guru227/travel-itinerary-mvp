@@ -1,63 +1,91 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { personas } from '../data/personas';
 
 const AgentShowcase: React.FC = () => {
   const navigate = useNavigate();
 
   return (
     <section className="py-20 px-4 bg-white">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="font-poppins font-bold text-4xl md:text-5xl text-secondary mb-4">
-            Meet Your Travel Assistant
+            Meet Your Travel Assistants
           </h2>
           <p className="font-lato text-xl text-gray-600">
-            Powered by advanced AI to understand your travel dreams
+            Choose from our specialized AI travel experts, each designed for different travel styles
           </p>
         </div>
         
-        <div className="bg-gradient-to-br from-surface to-white p-8 md:p-12 rounded-2xl border-2 border-primary/20 shadow-xl">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="w-32 h-32 md:w-44 md:h-44 rounded-full overflow-hidden shadow-lg border-4 border-primary/20">
-              <img 
-                src="/images/nomad.png" 
-                alt="Nomad's Compass Avatar" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            <div className="flex-1 text-center md:text-left">
-              <h3 className="font-poppins font-bold text-2xl md:text-3xl text-secondary mb-2">
-                Nomad's Compass
-              </h3>
-              <p className="font-poppins font-semibold text-primary text-lg mb-4">
-                Your AI Travel Planning Expert
-              </p>
-              <p className="font-lato text-gray-700 leading-relaxed mb-6">
-                With extensive knowledge of destinations worldwide, cultural insights, and budget optimization techniques, 
-                I'm here to transform your travel ideas into detailed, actionable itineraries. Whether you're seeking 
-                adventure, relaxation, cultural immersion, or culinary experiences, I'll craft the perfect journey for you.
-              </p>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {personas.map((persona) => (
+            <div 
+              key={persona.id}
+              className={`relative bg-gradient-to-br from-surface to-white p-6 md:p-8 rounded-2xl border-2 shadow-xl transition-all duration-300 ${
+                persona.status === 'active' 
+                  ? 'border-primary/20 hover:shadow-2xl hover:-translate-y-1' 
+                  : 'border-gray-200 opacity-75'
+              }`}
+            >
+              {/* Coming Soon Badge */}
+              {persona.status === 'coming_soon' && (
+                <div className="absolute top-4 right-4 bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-poppins font-bold">
+                  Coming Soon
+                </div>
+              )}
               
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Destination Expert', 'Budget Optimizer', 'Cultural Guide', 'Adventure Planner'].map((skill, index) => (
-                  <span 
-                    key={index}
-                    className="px-3 py-1 bg-primary/10 text-primary font-lato font-semibold text-sm rounded-full"
-                  >
-                    {skill}
-                  </span>
-                ))}
+              <div className="text-center">
+                <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden shadow-lg border-4 border-primary/20 mx-auto mb-4">
+                  <img 
+                    src={persona.avatarUrl} 
+                    alt={`${persona.name} Avatar`} 
+                    className={`w-full h-full object-cover ${
+                      persona.status === 'coming_soon' ? 'grayscale' : ''
+                    }`}
+                  />
+                </div>
+                
+                <h3 className="font-poppins font-bold text-xl md:text-2xl text-secondary mb-2">
+                  {persona.name}
+                </h3>
+                <p className="font-poppins font-semibold text-primary text-md mb-4">
+                  {persona.tagline}
+                </p>
+                <p className="font-lato text-gray-700 leading-relaxed mb-6 text-sm">
+                  {persona.description}
+                </p>
+                
+                {persona.skills && (
+                  <div className="flex flex-wrap gap-2 mb-6 justify-center">
+                    {persona.skills.map((skill, index) => (
+                      <span 
+                        key={index}
+                        className={`px-2 py-1 font-lato font-semibold text-xs rounded-full ${
+                          persona.status === 'active'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                <button
+                  onClick={() => persona.status === 'active' && navigate('/chat')}
+                  disabled={persona.status === 'coming_soon'}
+                  className={`w-full font-poppins font-bold px-6 py-3 rounded-lg transition-all duration-300 ${
+                    persona.status === 'active'
+                      ? 'bg-primary hover:bg-primary/90 text-white transform hover:scale-105 shadow-lg'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {persona.status === 'active' ? 'Start Chatting' : 'Coming Soon'}
+                </button>
               </div>
-              
-              <button
-                onClick={() => navigate('/chat')}
-                className="bg-primary hover:bg-primary/90 text-white font-poppins font-bold px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-              >
-                Start Chatting
-              </button>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

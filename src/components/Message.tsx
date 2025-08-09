@@ -1,5 +1,6 @@
 import React from 'react';
 import { Message } from '../types';
+import { getActivePersona } from '../data/personas';
 
 interface MessageProps {
   message: Message;
@@ -7,14 +8,15 @@ interface MessageProps {
 
 const MessageComponent: React.FC<MessageProps> = ({ message }) => {
   const isUser = message.sender === 'user';
+  const activePersona = getActivePersona();
 
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
       {!isUser && (
         <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary/20">
           <img 
-            src="/images/nomad.png" 
-            alt="Nomad's Compass Avatar" 
+            src={activePersona.avatarUrl} 
+            alt={`${activePersona.name} Avatar`} 
             className="w-full h-full object-cover"
           />
         </div>

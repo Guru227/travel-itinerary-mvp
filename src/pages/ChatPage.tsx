@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft, User, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ChatWindow from '../components/ChatWindow';
 import ChatSidebar from '../components/ChatSidebar';
@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import { AuthService } from '../lib/auth';
 import { User as UserType, ChatSession, Message, ItineraryData } from '../types';
 import { useItineraryProcessor } from '../hooks/useItineraryProcessor';
+import { personas, getActivePersona } from '../data/personas';
 
 const ChatPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +26,8 @@ const ChatPage: React.FC = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [itineraryData, setItineraryData] = useState<ItineraryData | null>(null);
+  const [selectedPersona, setSelectedPersona] = useState(getActivePersona());
+  const [showPersonaDropdown, setShowPersonaDropdown] = useState(false);
 
   // Use the itinerary processor hook
   const {
@@ -689,21 +692,114 @@ const ChatPage: React.FC = () => {
           >
             <ArrowLeft className="w-5 h-5 text-secondary" />
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/20">
-              <img 
-                src="/images/nomad.png" 
-                alt="Nomad's Compass Avatar" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div>
-              <h1 className="font-poppins font-bold text-secondary">Nomad's Compass</h1>
-              <p className="text-sm text-gray-500 font-lato">AI Travel Assistant</p>
-            </div>
+          
+          {/* Agent Selector Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowPersonaDropdown(!showPersonaDropdown)}
+              className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg transition-colors"
+            >
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-primary/20">
+                <img 
+                  src={selectedPersona.avatarUrl} 
+                  alt={`${selectedPersona.name} Avatar`} 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <h1 className="font-poppins font-bold text-secondary">{selectedPersona.name}</h1>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500 font-lato">{selectedPersona.tagline}</p>
+              </div>
+            </button>
+            
+            {/* Dropdown Menu */}
+            {showPersonaDropdown && (
+              <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                {personas.map((persona) => (
+                  <button
+                    key={persona.id}
+                    onClick={() => {
+                      if (persona.status === 'active') {
+                        setSelectedPersona(persona);
+                        setShowPersonaDropdown(false);
+                      }
+                    }}
+                    disabled={persona.status === 'coming_soon'}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                      persona.status === 'active'
+                        ? 'hover:bg-gray-50 cursor-pointer'
+                        : 'cursor-not-allowed opacity-60'
+                    } ${selectedPersona.id === persona.id ? 'bg-primary/5' : ''}`}
+                  >
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0">
+                      <img 
+                        src={persona.avatarUrl} 
+                        alt={`${persona.name} Avatar`} 
+                        className={`w-full h-full object-cover ${
+                          persona.status === 'coming_soon' ? 'grayscale' : ''
+                        }`}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-poppins font-semibold text-secondary truncate">
+                          {persona.name}
+                        </h3>
+                        {persona.status === 'coming_soon' && (
+                          <span className="bg-gray-500 text-white px-2 py-0.5 rounded-full text-xs font-poppins font-bold flex-shrink-0">
+                            Coming Soon
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500 font-lato truncate">
+                        {persona.tagline}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Close dropdown when clicking outside */}
+      {showPersonaDropdown && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowPersonaDropdown(false)}
+        />
+      )}
+
+      {/* Coming Soon Modal for inactive personas */}
+      {selectedPersona.status === 'coming_soon' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md text-center">
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20 mx-auto mb-4">
+              <img 
+                src={selectedPersona.avatarUrl} 
+                alt={`${selectedPersona.name} Avatar`} 
+                className="w-full h-full object-cover grayscale"
+              />
+            </div>
+            <h2 className="font-poppins font-bold text-xl text-secondary mb-2">
+              {selectedPersona.name}
+            </h2>
+            <p className="font-lato text-gray-600 mb-4">
+              This AI travel assistant is coming soon! We're working hard to bring you specialized expertise in {selectedPersona.tagline.toLowerCase()}.
+            </p>
+            <button
+              onClick={() => setSelectedPersona(getActivePersona())}
+              className="bg-primary hover:bg-primary/90 text-white font-poppins font-semibold px-6 py-2 rounded-lg transition-colors"
+            >
+              Use Nomad's Compass Instead
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">

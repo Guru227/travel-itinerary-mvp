@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Message } from '../types';
 import MessageComponent from './Message';
+import { getActivePersona } from '../data/personas';
 
 interface ChatWindowProps {
   messages: Message[];
@@ -13,6 +14,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, isLoading, onSendMess
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const activePersona = getActivePersona();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,8 +59,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, isLoading, onSendMess
           <div className="flex items-start gap-3">
             <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 border-2 border-primary/20">
               <img 
-                src="/images/nomad.png" 
-                alt="Nomad's Compass Avatar" 
+                src={activePersona.avatarUrl} 
+                alt={`${activePersona.name} Avatar`} 
                 className="w-full h-full object-cover"
               />
             </div>
@@ -69,7 +71,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages, isLoading, onSendMess
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                   <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                <span className="text-gray-500 font-lato text-sm">Nomad's Compass is typing...</span>
+                <span className="text-gray-500 font-lato text-sm">{activePersona.name} is typing...</span>
               </div>
             </div>
           </div>
