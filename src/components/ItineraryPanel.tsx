@@ -59,10 +59,8 @@ const ItineraryPanel: React.FC<ItineraryPanelProps> = ({
   };
 
   const emailItinerary = () => {
-    const link = generateShareableLink();
-    const subject = encodeURIComponent(`Check out this travel itinerary: ${itineraryData?.title || 'Amazing Trip'}`);
-    const body = encodeURIComponent(`I thought you might be interested in this travel itinerary I found:\n\n${itineraryData?.title || 'Travel Itinerary'}\n${itineraryData?.summary || ''}\n\nView the full itinerary here: ${link}`);
-    window.open(`mailto:?subject=${subject}&body=${body}`);
+    // Call the onMail prop which now handles the API integration
+    onMail();
   };
 
   const renderSchedule = () => {

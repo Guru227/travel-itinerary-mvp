@@ -613,10 +613,41 @@ const ChatPage: React.FC = () => {
   // Remove separate share function since save now does both
 
   const mailItinerary = async () => {
-    if (!itineraryData || !user) return;
-    
-    // This would integrate with an email service
-    alert(`Itinerary would be sent to ${user.email} (Email service integration needed)`);
+    if (!itineraryData || !user || !currentSessionId) return;
+
+    try {
+      // Gather payload data
+      const shareableLink = `${window.location.origin}/community/itinerary/${currentSessionId}`;
+      
+      const payload = {
+        shareableLink: shareableLink,
+        itineraryTitle: itineraryData.title,
+        itinerarySummary: itineraryData.summary,
+        destination: itineraryData.destination,
+        duration: itineraryData.duration,
+        numberOfTravelers: itineraryData.number_of_travelers,
+        userEmail: user.email,
+        userName: user.nickname || user.email.split('@')[0]
+      };
+
+      // Make API request to n8n webhook
+      const response = await fetch('https://gkasivinayagam.app.n8n.cloud/webhook-test/a0796ab1-ffc9-4abb-8d69-ff1e631045e5', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        alert('Your itinerary has been sent!');
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error sending itinerary email:', error);
+      alert('Failed to send email. Please try again.');
+    }
   };
 
   const signOut = () => {
