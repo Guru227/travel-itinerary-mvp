@@ -510,11 +510,12 @@ const ChatPage: React.FC = () => {
 
   const deleteSession = async (sessionId: string) => {
     try {
-      // Delete the chat session (messages and itineraries will be cascade deleted)
+      // Delete the chat session and related data
       const { error } = await supabase
         .from('chat_sessions')
         .delete()
-        .eq('id', sessionId);
+        .eq('id', sessionId)
+        .eq('user_id', user?.id);
 
       if (error) throw error;
 
@@ -528,6 +529,9 @@ const ChatPage: React.FC = () => {
           setCurrentSessionId(remainingSessions[0].id);
         } else {
           // No sessions left, create a new one
+          setCurrentSessionId(null);
+          setMessages([]);
+          setItineraryData(null);
           await createNewSession();
         }
       }
