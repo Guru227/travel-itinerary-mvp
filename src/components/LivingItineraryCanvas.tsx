@@ -32,17 +32,23 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
   // Initialize itinerary items from data
   useEffect(() => {
     if (itineraryData) {
+      console.log('Processing itinerary data:', itineraryData);
       const items: ItineraryItem[] = [];
       
       // Convert schedule items
       itineraryData.daily_schedule?.forEach((day) => {
+        console.log('Processing day:', day);
         day.activities.forEach((activity, index) => {
+          console.log('Processing activity:', activity);
           items.push({
             id: `schedule_${day.day}_${index}`,
             type: 'activity',
             status: 'confirmed',
             data: {
-              ...activity,
+              title: activity.title,
+              description: activity.description,
+              location: activity.location,
+              cost: activity.cost,
               day: day.day,
               date: day.date
             },
@@ -71,6 +77,7 @@ const LivingItineraryCanvas: React.FC<LivingItineraryCanvasProps> = ({
         });
       });
 
+      console.log('Final processed items:', items);
       setItineraryItems(items);
     }
   }, [itineraryData]);
