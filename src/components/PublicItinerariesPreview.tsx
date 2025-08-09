@@ -17,19 +17,19 @@ const PublicItinerariesPreview: React.FC = () => {
 
   const loadLatestItineraries = async () => {
     try {
-      // Corrected query to follow proper relational path: itineraries -> chat_sessions -> users
+      // Query using the normalized schema: itineraries -> chat_sessions -> users
       const { data, error } = await supabase
         .from('itineraries')
         .select(`
           *,
-          users!inner (
-            nickname,
-            email
-          ),
           chat_sessions!inner (
             title,
             summary,
-            number_of_travelers
+            number_of_travelers,
+            users!inner (
+              nickname,
+              email
+            )
           )
         `)
         .eq('is_public', true)
@@ -38,7 +38,7 @@ const PublicItinerariesPreview: React.FC = () => {
 
       if (error) throw error;
       
-      // Log the data to debug the corrected structure
+      // Log the data to debug the normalized structure
       console.log('PublicItinerariesPreview: Loaded itineraries:', data);
       
       setItineraries(data || []);

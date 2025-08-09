@@ -20,11 +20,11 @@ const PublicItineraryCard: React.FC<PublicItineraryCardProps> = ({ itinerary, on
 
   // Get author display name - nickname or email username
   const getAuthorName = () => {
-    if (itinerary.users?.nickname) {
-      return itinerary.users.nickname;
+    if (itinerary.chat_sessions?.users?.nickname) {
+      return itinerary.chat_sessions.users.nickname;
     }
-    if (itinerary.users?.email) {
-      return itinerary.users.email.split('@')[0];
+    if (itinerary.chat_sessions?.users?.email) {
+      return itinerary.chat_sessions.users.email.split('@')[0];
     }
     return 'Anonymous';
   };

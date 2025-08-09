@@ -177,6 +177,15 @@ JSON Response:`;
   // Retry logic for API calls
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {
+      // Add logging before the function call
+      console.log('=== Calling Supabase Edge Function ===');
+      console.log('Function name: convert-itinerary');
+      console.log('Payload preview:', {
+        itineraryTextLength: conversionPrompt.length,
+        attempt: attempt,
+        maxRetries: maxRetries
+      });
+
       // Make API call to Supabase Edge Function (which calls Gemini)
       const response = await supabase.functions.invoke('convert-itinerary', {
         body: {
@@ -185,6 +194,10 @@ JSON Response:`;
       });
 
       if (response.error) {
+        console.error('=== Supabase Edge Function Error ===');
+        console.error('Error object:', response.error);
+        console.error('Error message:', response.error.message);
+        console.error('Error details:', response.error.details);
         throw new ItineraryProcessorError(
           `API call failed: ${response.error.message}`,
           'API_ERROR',
@@ -193,11 +206,16 @@ JSON Response:`;
       }
 
       if (!response.data || !response.data.itinerary) {
+        console.error('=== Invalid Response Structure ===');
+        console.error('Response data:', response.data);
         throw new ItineraryProcessorError(
           'No itinerary data received from API',
           'API_ERROR'
         );
       }
+
+      console.log('=== Successful Edge Function Response ===');
+      console.log('Response data keys:', Object.keys(response.data));
 
       // Validate and structure the response
       const structuredData = validateAndStructureData(response.data.itinerary);
@@ -206,6 +224,11 @@ JSON Response:`;
 
     } catch (error) {
       lastError = error as Error;
+      
+      console.error(`=== Attempt ${attempt} Failed ===`);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Full error object:', error);
       
       // If it's the last attempt, throw the error
       if (attempt > maxRetries) {
@@ -221,6 +244,7 @@ JSON Response:`;
       }
       
       // Wait before retrying (exponential backoff)
+      console.log(`Waiting ${Math.pow(2, attempt) * 1000}ms before retry...`);
       await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
     }
   }

@@ -391,14 +391,13 @@ const ChatPage: React.FC = () => {
     if (!currentSessionId || !itineraryData) return;
 
     try {
-      // Save the itinerary with is_public set to true (Save and Share in one action)
+      // Save the itinerary with is_public set to true (no user_id needed - determined by session)
       const { error } = await supabase
         .from('itineraries')
         .upsert([{
           title: itineraryData.title,
           session_id: currentSessionId,
           is_public: true, // Automatically make public when saving
-          user_id: user?.id, // Associate with logged-in user
           content: itineraryData
         }]);
 

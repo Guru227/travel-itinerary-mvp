@@ -68,7 +68,6 @@ export type Database = {
           content: any;
           created_at: string | null;
           session_id: string | null;
-          user_id: string | null;
           is_public: boolean;
         };
         Insert: {
@@ -77,7 +76,6 @@ export type Database = {
           content: any;
           created_at?: string | null;
           session_id?: string | null;
-          user_id?: string | null;
           is_public?: boolean;
         };
         Update: {
@@ -86,7 +84,6 @@ export type Database = {
           content?: any;
           created_at?: string | null;
           session_id?: string | null;
-          user_id?: string | null;
           is_public?: boolean;
         };
       };

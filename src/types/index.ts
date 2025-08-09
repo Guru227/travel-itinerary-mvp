@@ -18,18 +18,17 @@ export interface ChatSession {
 export interface Itinerary {
   id: string;
   session_id: string;
-  user_id: string | null;
   is_public: boolean;
   content: ItineraryData | null;
   created_at: string;
-  users?: {
-    nickname?: string | null;
-    email: string;
-  };
   chat_sessions?: {
     title: string;
     summary?: string;
     number_of_travelers?: number;
+    users?: {
+      nickname?: string | null;
+      email: string;
+    };
   };
 }
 
