@@ -17,12 +17,12 @@ const PublicItinerariesPreview: React.FC = () => {
 
   const loadLatestItineraries = async () => {
     try {
-      // Updated query to JOIN with users table to get author information
+      // Updated query to JOIN with auth.users table to get author information
       const { data, error } = await supabase
         .from('itineraries')
         .select(`
           *,
-          users!inner(
+          user:auth.users!inner(
             nickname,
             email
           )
