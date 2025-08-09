@@ -13,7 +13,7 @@ const ItineraryPreviewModal: React.FC<ItineraryPreviewModalProps> = ({ itinerary
   const [activeTab, setActiveTab] = useState<'schedule' | 'checklist' | 'map'>('schedule');
   const [isCloning, setIsCloning] = useState(false);
 
-  const data = itinerary.itinerary_data_json;
+  const data = itinerary.content;
 
   const handleClone = async () => {
     const userId = AuthService.getCurrentUserId();

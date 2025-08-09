@@ -30,15 +30,20 @@ const CommunityPage: React.FC = () => {
       );
       setFilteredItineraries(filtered);
     } else {
-      setFilteredItineraries(itineraries.filter(itinerary => 
-        itinerary.content && typeof itinerary.content === 'object'
-      ));
+      // Show all itineraries that have valid content
+      const validItineraries = itineraries.filter(itinerary => {
+        const hasValidContent = itinerary.content && 
+          typeof itinerary.content === 'object' && 
+          itinerary.content.title;
+        console.log('Itinerary validation:', itinerary.id, hasValidContent, itinerary.content);
+        return hasValidContent;
+      });
+      setFilteredItineraries(validItineraries);
     }
   }, [searchTerm, itineraries]);
 
   const loadPublicItineraries = async () => {
     try {
-      // Fixed API endpoint logic - Explicitly query for public itineraries
       const { data, error } = await supabase
         .from('itineraries')
         .select('*')
@@ -46,6 +51,10 @@ const CommunityPage: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      // Log the data to debug the structure
+      console.log('Loaded itineraries:', data);
+      
       setItineraries(data || []);
     } catch (error) {
       console.error('Error loading public itineraries:', error);
