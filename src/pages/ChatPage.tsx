@@ -521,14 +521,35 @@ const ChatPage: React.FC = () => {
       
       console.log('User ID for deletion:', user.id);
       
-      // Delete the chat session (cascade will handle related data)
-      const { data, error } = await supabase
+      // First, try to delete related messages manually
+      const { error: messagesError } = await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('session_id', sessionId);
+
+      if (messagesError) {
+        console.error('Error deleting messages:', messagesError);
+      }
+
+      // Then delete related itineraries
+      const { error: itinerariesError } = await supabase
+        .from('itineraries')
+        .delete()
+        .eq('session_id', sessionId);
+
+      if (itinerariesError) {
+        console.error('Error deleting itineraries:', itinerariesError);
+      }
+
+      // Finally, delete the chat session
+      const { data, error, count } = await supabase
         .from('chat_sessions')
         .delete()
         .eq('id', sessionId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
 
-      console.log('Delete result:', { data, error });
+      console.log('Delete result:', { data, error, count });
       
       if (error) {
         console.error('Database delete error:', error);
@@ -536,7 +557,13 @@ const ChatPage: React.FC = () => {
       }
       
       // Check if any rows were actually deleted
-      console.log('Rows affected by delete:', data);
+      if (!data || data.length === 0) {
+        console.error('No rows were deleted - session may not exist or user lacks permission');
+        alert('Failed to delete chat session: Session not found or access denied');
+        return;
+      }
+      
+      console.log('Successfully deleted session:', data);
 
       // Remove from local state
       setSessions(prev => prev.filter(session => session.id !== sessionId));
