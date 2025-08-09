@@ -443,22 +443,6 @@ const ChatPage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {user && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-lg">
-                <User className="w-4 h-4 text-gray-500" />
-                <span className="font-lato text-sm text-gray-700">{user.email}</span>
-              </div>
-              <button
-                onClick={signOut}
-                className="px-3 py-1 text-sm font-lato text-gray-600 hover:text-secondary transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Main Content */}
