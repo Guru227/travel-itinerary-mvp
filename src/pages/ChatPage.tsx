@@ -9,6 +9,7 @@ import AuthModal from '../components/AuthModal';
 import { supabase } from '../lib/supabase';
 import { AuthService } from '../lib/auth';
 import { User as UserType, ChatSession, Message, ItineraryData } from '../types';
+import { useItineraryProcessor } from '../hooks/useItineraryProcessor';
 
 const ChatPage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,7 +25,31 @@ const ChatPage: React.FC = () => {
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [itineraryData, setItineraryData] = useState<ItineraryData | null>(null);
-  const [isConverting, setIsConverting] = useState(false);
+
+  // Use the itinerary processor hook
+  const {
+    isProcessing: isConverting,
+    error: processingError,
+    processItinerary,
+    clearError: clearProcessingError
+  } = useItineraryProcessor(
+    // onScheduleUpdate
+    (schedule) => {
+      console.log('Schedule updated:', schedule);
+    },
+    // onChecklistUpdate  
+    (checklist) => {
+      console.log('Checklist updated:', checklist);
+    },
+    // onMapUpdate
+    (mapPins) => {
+      console.log('Map pins updated:', mapPins);
+    },
+    // onMetadataUpdate
+    (metadata) => {
+      console.log('Metadata updated:', metadata);
+    }
+  );
 
   useEffect(() => {
     checkAuth();
@@ -259,41 +284,61 @@ const ChatPage: React.FC = () => {
   };
 
   const convertItinerary = async () => {
-    if (!currentSessionId || messages.length === 0) return;
+    if (!currentSessionId || messages.length === 0) {
+      alert('No conversation available to convert');
+      return;
+    }
 
-    setIsConverting(true);
-    try {
-      // Get the latest AI message that contains itinerary information
-      const aiMessages = messages.filter(m => m.sender === 'ai');
-      const latestItinerary = aiMessages[aiMessages.length - 1]?.content || '';
+    // Get the latest AI message that contains itinerary information
+    const aiMessages = messages.filter(m => m.sender === 'ai');
+    const latestItinerary = aiMessages[aiMessages.length - 1]?.content || '';
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/convert-itinerary`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          itineraryText: latestItinerary
-        }),
-      });
+    if (!latestItinerary.trim()) {
+      alert('No itinerary content found to convert');
+      return;
+    }
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    // Clear any previous processing errors
+    clearProcessingError();
 
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.message || data.error);
-      }
+    // Process the itinerary using the new processor
+    const result = await processItinerary(latestItinerary);
+    
+    if (result) {
+      // Convert the structured data to the format expected by ItineraryPanel
+      const convertedData: ItineraryData = {
+        title: result.tripTitle,
+        summary: result.summary,
+        destination: result.destination,
+        duration: result.duration,
+        number_of_travelers: result.numberOfTravelers,
+        daily_schedule: result.schedule.map(item => ({
+          day: item.day,
+          date: item.date,
+          activities: [{
+            time: item.time,
+            title: item.activity,
+            description: item.description,
+            location: item.location,
+            cost: item.estimatedCost
+          }]
+        })),
+        checklist: result.checklist.map(category => ({
+          category: category.category,
+          items: category.items.map(item => item.task)
+        })),
+        map_locations: result.mapPins.map(pin => ({
+          name: pin.name,
+          address: pin.address,
+          lat: pin.lat,
+          lng: pin.lng,
+          type: pin.type as 'accommodation' | 'restaurant' | 'attraction' | 'transport'
+        }))
+      };
 
-      setItineraryData(data.itinerary);
-    } catch (error) {
-      console.error('Error converting itinerary:', error);
-      alert('Failed to convert itinerary. Please try again.');
-    } finally {
-      setIsConverting(false);
+      setItineraryData(convertedData);
+    } else if (processingError) {
+      alert(`Failed to convert itinerary: ${processingError}`);
     }
   };
 
