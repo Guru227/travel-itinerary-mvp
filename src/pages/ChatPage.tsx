@@ -112,18 +112,20 @@ const ChatPage: React.FC = () => {
 
   const loadExistingItinerary = async (sessionId: string) => {
     try {
-      const { data: existingItinerary, error } = await supabase
+      const { data: itinerariesData, error } = await supabase
         .from('itineraries')
         .select('*')
         .eq('session_id', sessionId)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (error && error.code !== 'PGRST116') {
         console.error('Error loading existing itinerary:', error);
         return;
       }
 
-      if (existingItinerary && existingItinerary.content) {
+      if (itinerariesData && itinerariesData.length > 0 && itinerariesData[0].content) {
+        const existingItinerary = itinerariesData[0];
         console.log('Found existing itinerary for session:', sessionId);
         setItineraryData(existingItinerary.content);
       }
